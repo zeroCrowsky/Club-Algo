@@ -172,6 +172,21 @@ int main() {
 	}
 	
 	
+	for (int r = 0; r < in.r; r++) {
+		for (int c = 0; c < in.c; c++) {
+			if (!in.matriceFilled[r][c]) {
+				if (in.matriceJambon[r][c])
+					cerr << "H";
+				else
+					cerr << "T";
+			}
+			else {
+				cerr << " ";
+			}
+		}
+		cerr << endl;
+	}
+	
 	
 }
 
