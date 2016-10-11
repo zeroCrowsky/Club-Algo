@@ -13,6 +13,13 @@ typedef struct outputEl {
 	int yMax;
 } outputEl;
 
+void printOutputEl(outputEl& el) {
+	cout << el.yMin << " " << el.xMin << " " << el.yMax << " " << el.xMax << endl;
+}
+void printErrorEl(outputEl& el) {
+	cerr << el.yMin << " " << el.xMin << " " << el.yMax << " " << el.xMax << endl;
+}
+
 
 typedef struct input {
 	int r, c, h, s;
@@ -31,12 +38,12 @@ typedef struct input {
 
 
 bool canPutHere(input& in, outputEl& el) {
-	if (el.xMax < el.xMin || el.yMax < el.xMin
+	if (el.xMax < el.xMin || el.yMax < el.yMin
 		|| (el.xMax - el.xMin + 1) * (el.yMax - el.yMin + 1) > in.s
 		|| el.xMin < 0 || el.yMin < 0 || el.xMax >= in.c || el.yMax >= in.r)
 		return false;
-	
 	int nbJambon = 0;
+	bool fillOne = false;
 	for (int x = el.xMin; x <= el.xMax; x++) {
 		for (int y = el.yMin; y <= el.yMax; y++) {
 			if (in.matriceFilled[y][x])
@@ -64,6 +71,16 @@ void put(input& in, vector<outputEl>& out, outputEl& el) {
 }
 
 
+void remove(input&in, vector<outputEl>& out, int i) {
+	outputEl removed = out[i];
+	out.erase(out.begin() + i);
+	
+	for (int x = el.xMin; x <= el.xMax; x++) {
+		for (int y = el.yMin; y <= el.yMax; y++) {
+			in.matriceFilled[y][x] = false;
+		}
+	}
+}
 
 
 
@@ -71,64 +88,23 @@ void put(input& in, vector<outputEl>& out, outputEl& el) {
 
 void fillOutput(input& in, vector<outputEl>& out) {
 	
-	for (int y = 0; y < in.r; y++) {
-		for (int x = 0; x < in.c - in.h; x++) {
-			outputEl el;
-			el.xMin = x;
-			el.xMax = min(x+in.s-1, in.c-1);
-			el.yMin = y;
-			el.yMax = y;
-			if (canPutHere(in, el)) {
-				put(in, out, el);
-				x += in.s - 1;
+	for (int h = 1; h <= in.s; h++) {
+		for (int w = 1; w*h <= in.s; w++) {
+			for (int y = 0; y < in.r - h + 1; y++) {
+				for (int x = 0; x < in.c - w + 1; x++) {
+					outputEl el;
+					el.xMin = x;
+					el.xMax = x + w;
+					el.yMin = y;
+					el.yMax = y + h;
+					if (canPutHere(in, el)) {
+						put(in, out, el);
+					}
+				}
 			}
 		}
 	}
 	
-	for (int y = 0; y < in.r; y++) {
-		for (int x = 0; x < in.c - in.h; x++) {
-			outputEl el;
-			el.xMin = x;
-			el.xMax = min(x+in.s/2-1, in.c-1);
-			el.yMin = y;
-			el.yMax = y+1;
-			if (canPutHere(in, el)) {
-				put(in, out, el);
-				x += in.s - 1;
-			}
-		}
-	}
-	
-	
-	for (int y = 0; y < in.r; y++) {
-		for (int x = 0; x < in.c - in.h; x++) {
-			outputEl el;
-			el.xMin = x;
-			el.xMax = min(x+in.s/3-1, in.c-1);
-			el.yMin = y;
-			el.yMax = y+2;
-			if (canPutHere(in, el)) {
-				put(in, out, el);
-				x += in.s - 1;
-			}
-		}
-	}
-	
-	
-	
-	for (int y = 0; y < in.r; y++) {
-		for (int x = 0; x < in.c - in.h; x++) {
-			outputEl el;
-			el.xMin = x;
-			el.xMax = min(x+in.s/4-1, in.c-1);
-			el.yMin = y;
-			el.yMax = y+3;
-			if (canPutHere(in, el)) {
-				put(in, out, el);
-				x += in.s - 1;
-			}
-		}
-	}
 	
 	
 }
@@ -168,10 +144,10 @@ int main() {
 	cout << out.size() << endl;
 	
 	for (int i = 0; i < out.size(); i++) {
-		cout << out[i].yMin << " " << out[i].xMin << " " << out[i].yMax << " " << out[i].xMax << endl;
+		printOutputEl(out[i]);
 	}
 	
-	
+	int nbPoints = 0;
 	for (int r = 0; r < in.r; r++) {
 		for (int c = 0; c < in.c; c++) {
 			if (!in.matriceFilled[r][c]) {
@@ -182,11 +158,12 @@ int main() {
 			}
 			else {
 				cerr << " ";
+				nbPoints++;
 			}
 		}
 		cerr << endl;
 	}
-	
+	cerr << "Nombre de points : " << nbPoints << endl;
 	
 }
 
