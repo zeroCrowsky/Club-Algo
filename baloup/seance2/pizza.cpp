@@ -288,13 +288,13 @@ typedef struct Pizza {
 Pizza* bestPizza;
 
 
-
-
-
-void recursiveFill(Pizza& pizza, vector<PartRoyale>& possibleParts, vector<PartRoyale>::iterator start, int recursiveCalls) {
+void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector<PartRoyale>::iterator start, long long* count) {
 	
 	// cas d'arrêt
 	if (start == possibleParts.end()) {
+		(*count)++;
+		if ((*count) % 10000000 == 0)
+			cerr << "Progress=" << *count << endl;
 		if (pizza.numberFilled > bestPizza->numberFilled) {
 			pizza.displayPizza(cerr);
 			*bestPizza = pizza;
@@ -302,16 +302,16 @@ void recursiveFill(Pizza& pizza, vector<PartRoyale>& possibleParts, vector<PartR
 		return;
 	}
 	
-	
 	for (vector<PartRoyale>::iterator it = start; it != possibleParts.end(); ++it) {
-		if (!pizza.canPut(*it, false))
-			continue;
+		if (pizza.canPut(*it, false)) {
+			pizza.put(*it);
+			recursiveFill(pizza, possibleParts, it + 1, count);
+			pizza.remove(*it);
+		}
+		else if (it + 1 == possibleParts.end()){
+			recursiveFill(pizza, possibleParts, it + 1, count);
+		}
 		
-		pizza.put(*it);
-		
-		recursiveFill(pizza, possibleParts, it + 1, recursiveCalls + 1);
-		
-		pizza.remove(*it);
 	}
 	
 }
@@ -351,8 +351,6 @@ void fillParts(Pizza& pizza) {
 		}
 	}
 	*/
-	
-	
 	
 	
 	
@@ -434,8 +432,8 @@ void fillParts(Pizza& pizza) {
 
 	for (int y = 0; y < pizza.height; y++) {
 		for (int x = 0; x < pizza.width; x++) {
-			for (int h = 1; h <= pizza.maxRoyale; h++) {
-				for (int w = 1; w*h <= pizza.maxRoyale; w++) {
+			for (int w = 1; w <= pizza.maxRoyale; w++) {
+				for (int h = 1; w*h <= pizza.maxRoyale; h++) {
 					PartRoyale el(x, x + w - 1, y, y + h - 1);
 					if (pizza.canPut(el, true)) {
 						possibleParts.push_back(el);
@@ -447,8 +445,14 @@ void fillParts(Pizza& pizza) {
 	
 	cerr << possibleParts.size() << endl;
 	
+	long long count = 0;
 	
-	recursiveFill(pizza, possibleParts, possibleParts.begin(), 0);
+	recursiveFill(pizza, possibleParts, possibleParts.begin(), &count);
+	
+	cerr << "End. possibleParts=" << possibleParts.size() << endl;
+	cerr << "End. Progress=" << count << endl;
+	
+	pizza = *bestPizza;
 	
 }
 
