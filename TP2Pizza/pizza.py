@@ -25,9 +25,10 @@ def check(h, s, piece) :
     if nr == 0 :
         return False
     nc = len(piece[0])
-    if nc * nr >= s :
+    print("check nc * nr :", nc * nr, "s :", s)
+    if nc * nr > s :
         return False
-
+    print("Lol")
     for i in range(nr) :
         for j in range(nc):
             cpth += 1 if piece[i][j] == 'H' else 0
@@ -45,8 +46,8 @@ def best_share(r, c, h, s, pizza):
             npiece = 1
             
             print(pizza[i])
-            piece = pizza[i][j:j + s]
-            print(piece)
+            piece = [pizza[i][j:j + s]]
+            print(" " * j + piece[0])
             if check(h, s, piece) :
                 npiece = s
                 royal_pieces.append(((i, j), (i, j + npiece)))
