@@ -340,7 +340,6 @@ void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector
 	
 	(*count)++; // comparison count
 	if (pizza.numberFilled > bestPizza->numberFilled) {
-		cerr << "Score : " << pizza.numberFilled << endl;
 		pizza.outputToFile();
 		*bestPizza = pizza;
 	}
@@ -479,28 +478,54 @@ void fillParts(Pizza& pizza) {
 	
 	long long count = 0;
 	
-	for (int i=0; i<pizza.height; i++) {
-		vector<PartRoyale> possibleParts;
-		int y = i;
-		for (int x = 0; x < pizza.width; x++) {
-			for (int w = 1; w <= pizza.maxRoyale; w++) {
-				//for (int h = 1; w*h <= pizza.maxRoyale; h++) {
-					int h = 1;
-					PartRoyale el(x, x + w - 1, y, y + h - 1);
-					if (pizza.canPut(el, true)) {
-						possibleParts.push_back(el);
+	for (int nbLine=1; nbLine<=pizza.height;) {
+		for (int firstLine=0; firstLine+nbLine<=pizza.height; firstLine+=nbLine) {
+			
+			vector<PartRoyale> possibleParts;
+			for (int y = firstLine; y < firstLine + nbLine; y++) {
+				for (int x = 0; x < pizza.width; x++) {
+					for (int w = 1; w <= pizza.maxRoyale; w++) {
+						for (int h = 1; h <= nbLine && y+h <= firstLine + nbLine && w*h <= pizza.maxRoyale; h++) {
+							PartRoyale el(x, x + w - 1, y, y + h - 1);
+							if (pizza.canPut(el, true)) {
+								possibleParts.push_back(el);
+							}
+						}
 					}
-				//}
+				}
 			}
+			
+			cerr << "Lignes " << firstLine << "-" << (firstLine + nbLine - 1) << " : parts possibles " << possibleParts.size() << endl;
+			
+			int oldScore = pizza.numberFilled;
+			
+			// on retire des parts de la partie qu'on veut traiter
+			for (int i = firstLine; i < firstLine + nbLine; i++) {
+				for (int j = 0; j < pizza.width; j++) {
+					if (pizza.matriceFilled[i][j] != PartRoyale::UNDEFINED)
+						pizza.remove(pizza.matriceFilled[i][j]);
+				}
+			}
+			
+			recursiveFill(pizza, possibleParts, possibleParts.begin(), 0, &count, firstLine, nbLine);
+			pizza = *bestPizza;
+			cerr << "Lignes " << firstLine << "-" << (firstLine + nbLine - 1)
+				<< " : points gagnés : " << (pizza.numberFilled - oldScore)
+				<< " - Nouveau score : " << pizza.numberFilled << endl;
+			
 		}
 		
-		cerr << "Ligne " << i << " : parts possibles " << possibleParts.size() << endl;
-		recursiveFill(pizza, possibleParts, possibleParts.begin(), 0, &count, i, 1);
-		pizza = *bestPizza;
+		
+		
+		if (nbLine == pizza.height)
+			break;
+		nbLine*=2;
+		if (nbLine > pizza.height)
+			nbLine = pizza.height;
 	}
 	
 	// cerr << "End. possibleParts=" << possibleParts.size() << endl;
-	cerr << "End. Progress=" << count << endl;
+	cerr << "Fin du processus : nombre de comparaison = " << count << endl;
 	
 	//pizza = *bestPizza;
 	
