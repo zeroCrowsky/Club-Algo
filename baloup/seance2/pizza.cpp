@@ -3,9 +3,13 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 
+
+#ifdef __linux__
 
 
 string ANSI_RESET = "\x1b[0m";
@@ -47,7 +51,7 @@ string partsColors[] = {
 	ANSI_RESET + ANSI_AQUA
 };
 int nbPartsColors = 14;
-
+#endif
 
 typedef struct Point {
 	int x, y;
@@ -70,9 +74,11 @@ typedef struct PartRoyale {
 		out << yMin << " " << xMin << " " << yMax << " " << xMax << endl;
 	}
 	
+	#ifdef __linux__
 	string getColor() const {
 		return partsColors[(xMin + yMin + xMax + yMax) % nbPartsColors];
 	}
+	#endif
 	
 	static PartRoyale UNDEFINED;
 } PartRoyale;
@@ -150,6 +156,11 @@ typedef struct Pizza {
 		}
 		
 		return (nbJambon >= ham);
+	}
+	
+	bool canPutInSubPizza(const PartRoyale& el, bool ignoreFilled, int firstLine, int nbLine) {
+		if (el.yMin < firstLine || el.yMax >= firstLine + nbLine) return false;
+		return canPut(el, ignoreFilled);
 	}
 	
 	/*
@@ -236,11 +247,25 @@ typedef struct Pizza {
 	}
 	
 	
+	
+	void outputToFile() {
+		stringstream ss; ss << numberFilled;
+		ofstream ofs("result"+ss.str()+".out", ofstream::out);
+		outputResult(ofs);
+		ofs.close();
+	}
+	
+	
 	void displayPizza(ostream& out) {
+		#ifdef __linux__
+		
 		string previousColor = ANSI_PIZZA_FREE;
 		out << ANSI_PIZZA_FREE;
+		
+		#endif
 		for (int r = 0; r < height; r++) {
 			for (int c = 0; c < width; c++) {
+				#ifdef __linux__
 				string currentColor = (matriceFilled[r][c] == PartRoyale::UNDEFINED)
 						? ANSI_PIZZA_FREE : matriceFilled[r][c].getColor();
 				
@@ -248,12 +273,21 @@ typedef struct Pizza {
 					out << currentColor;
 					previousColor = currentColor;
 				}
+				#endif
 				
 				out << (matriceHam[r][c] ? "H" : "T");
 			}
-			out << ANSI_RESET << endl << previousColor;
+			#ifdef __linux__
+			out << ANSI_RESET;
+			#endif
+			out << endl;
+			#ifdef __linux__
+			out << previousColor;
+			#endif
 		}
+		#ifdef __linux__
 		out << ANSI_RESET;
+		#endif
 		out << "Nombre de points : " << numberFilled << endl;
 	}
 	
@@ -288,30 +322,27 @@ typedef struct Pizza {
 Pizza* bestPizza;
 
 
-void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector<PartRoyale>::iterator start, long long* count) {
+void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector<PartRoyale>::iterator start, int recurCount, long long* count, int firstLine, int nbLine) {
 	
-	// cas d'arrêt
-	if (start == possibleParts.end()) {
-		(*count)++;
-		if ((*count) % 10000000 == 0)
-			cerr << "Progress=" << *count << endl;
-		if (pizza.numberFilled > bestPizza->numberFilled) {
-			pizza.displayPizza(cerr);
-			*bestPizza = pizza;
-		}
-		return;
-	}
-	
+	int i=0;
 	for (vector<PartRoyale>::iterator it = start; it != possibleParts.end(); ++it) {
-		if (pizza.canPut(*it, false)) {
+		
+		if (pizza.canPutInSubPizza(*it, false, firstLine, nbLine)) {
 			pizza.put(*it);
-			recursiveFill(pizza, possibleParts, it + 1, count);
+			recursiveFill(pizza, possibleParts, it + 1, recurCount + 1, count, firstLine, nbLine);
 			pizza.remove(*it);
 		}
 		else if (it + 1 == possibleParts.end()){
-			recursiveFill(pizza, possibleParts, it + 1, count);
+			recursiveFill(pizza, possibleParts, it + 1, recurCount + 1, count, firstLine, nbLine);
 		}
 		
+	}
+	
+	(*count)++; // comparison count
+	if (pizza.numberFilled > bestPizza->numberFilled) {
+		cerr << "Score : " << pizza.numberFilled << endl;
+		pizza.outputToFile();
+		*bestPizza = pizza;
 	}
 	
 }
@@ -426,33 +457,52 @@ void fillParts(Pizza& pizza) {
 	 * possibles de toutes les parts plaçables
 	 */
 	
-	vector<PartRoyale> possibleParts;
+	/*vector<PartRoyale> possibleParts;
 	
 	
 
 	for (int y = 0; y < pizza.height; y++) {
 		for (int x = 0; x < pizza.width; x++) {
 			for (int w = 1; w <= pizza.maxRoyale; w++) {
-				for (int h = 1; w*h <= pizza.maxRoyale; h++) {
+				//for (int h = 1; w*h <= pizza.maxRoyale; h++) {
+					int h = 1;
 					PartRoyale el(x, x + w - 1, y, y + h - 1);
 					if (pizza.canPut(el, true)) {
 						possibleParts.push_back(el);
 					}
-				}
+				//}
 			}
 		}
 	}
 	
-	cerr << possibleParts.size() << endl;
+	cerr << possibleParts.size() << endl;*/
 	
 	long long count = 0;
 	
-	recursiveFill(pizza, possibleParts, possibleParts.begin(), &count);
+	for (int i=0; i<pizza.height; i++) {
+		vector<PartRoyale> possibleParts;
+		int y = i;
+		for (int x = 0; x < pizza.width; x++) {
+			for (int w = 1; w <= pizza.maxRoyale; w++) {
+				//for (int h = 1; w*h <= pizza.maxRoyale; h++) {
+					int h = 1;
+					PartRoyale el(x, x + w - 1, y, y + h - 1);
+					if (pizza.canPut(el, true)) {
+						possibleParts.push_back(el);
+					}
+				//}
+			}
+		}
+		
+		cerr << "Ligne " << i << " : parts possibles " << possibleParts.size() << endl;
+		recursiveFill(pizza, possibleParts, possibleParts.begin(), 0, &count, i, 1);
+		pizza = *bestPizza;
+	}
 	
-	cerr << "End. possibleParts=" << possibleParts.size() << endl;
+	// cerr << "End. possibleParts=" << possibleParts.size() << endl;
 	cerr << "End. Progress=" << count << endl;
 	
-	pizza = *bestPizza;
+	//pizza = *bestPizza;
 	
 }
 
@@ -473,7 +523,7 @@ void fillParts(Pizza& pizza) {
 int main() {
 	
 	
-	srand(time(NULL));
+	//srand(time(NULL));
 	
 	
 	Pizza pizza(cin);
@@ -483,7 +533,7 @@ int main() {
 	
 	fillParts(pizza);
 	
-	pizza.outputResult(cout);
+	pizza.outputToFile();
 	
 	
 	pizza.displayPizza(cerr);
