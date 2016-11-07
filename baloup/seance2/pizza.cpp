@@ -60,6 +60,11 @@ typedef struct Point {
 
 
 
+
+int previousExecBest;
+
+
+
 /*
 	Structure de données PartRoyale
 */
@@ -197,6 +202,18 @@ typedef struct Pizza {
 		// cerr << "put -> " << numberFilled << endl;
 	}
 	
+	int numberFilledInRange(int firstLine, int nbLine) {
+		int c = 0;
+		for (int x = 0; x < width; x++) {
+			for (int y = firstLine; y < firstLine + nbLine; y++) {
+				if (matriceFilled[y][x] != PartRoyale::UNDEFINED)
+					c++;
+			}
+		}
+		return c;
+	}
+	
+	
 	/*
 		remove the PartRoyale at the specified index from
 		the vector of PartRoyale of this Pizza
@@ -249,10 +266,16 @@ typedef struct Pizza {
 	
 	
 	void outputToFile() {
+		if (numberFilled <= previousExecBest)
+			return;
 		stringstream ss; ss << numberFilled;
 		ofstream ofs("result"+ss.str()+".out", ofstream::out);
 		outputResult(ofs);
 		ofs.close();
+		
+		ofstream ofs2("best.txt", ofstream::out);
+		ofs2 << numberFilled << endl;
+		ofs2.close();
 	}
 	
 	
@@ -322,18 +345,22 @@ typedef struct Pizza {
 Pizza* bestPizza;
 
 
+
+
+
+
+
+
+
+
+
 void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector<PartRoyale>::iterator start, int recurCount, long long* count, int firstLine, int nbLine) {
 	
-	int i=0;
 	for (vector<PartRoyale>::iterator it = start; it != possibleParts.end(); ++it) {
-		
 		if (pizza.canPutInSubPizza(*it, false, firstLine, nbLine)) {
 			pizza.put(*it);
 			recursiveFill(pizza, possibleParts, it + 1, recurCount + 1, count, firstLine, nbLine);
 			pizza.remove(*it);
-		}
-		else if (it + 1 == possibleParts.end()){
-			recursiveFill(pizza, possibleParts, it + 1, recurCount + 1, count, firstLine, nbLine);
 		}
 		
 	}
@@ -342,6 +369,41 @@ void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector
 	if (pizza.numberFilled > bestPizza->numberFilled) {
 		pizza.outputToFile();
 		*bestPizza = pizza;
+	}
+	
+}
+
+
+
+
+
+
+void partialFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector<PartRoyale>::iterator start, long long* count, int firstLine, int nbLine) {
+	
+	// on retire des parts de la partie qu'on veut traiter
+	for (int i = firstLine; i < firstLine + nbLine; i++) {
+		for (int j = 0; j < pizza.width; j++) {
+			if (pizza.matriceFilled[i][j] != PartRoyale::UNDEFINED)
+				pizza.remove(pizza.matriceFilled[i][j]);
+		}
+	}
+	
+	int sizeOfRange = nbLine * pizza.width;
+	
+	for (vector<PartRoyale>::iterator it = start;
+			it != possibleParts.end();
+			++it) {
+		if ((*it).yMin > firstLine
+			|| (*it).xMin >= sizeOfRange - (*bestPizza).numberFilledInRange(firstLine, nbLine)
+			) {
+			break;
+		}
+		if (pizza.canPut(*it, false)) {
+			pizza.put(*it);
+			recursiveFill(pizza, possibleParts, it + 1, 1, count, firstLine, nbLine);
+			pizza.remove(*it);
+		}
+		
 	}
 	
 }
@@ -499,15 +561,8 @@ void fillParts(Pizza& pizza) {
 			
 			int oldScore = pizza.numberFilled;
 			
-			// on retire des parts de la partie qu'on veut traiter
-			for (int i = firstLine; i < firstLine + nbLine; i++) {
-				for (int j = 0; j < pizza.width; j++) {
-					if (pizza.matriceFilled[i][j] != PartRoyale::UNDEFINED)
-						pizza.remove(pizza.matriceFilled[i][j]);
-				}
-			}
 			
-			recursiveFill(pizza, possibleParts, possibleParts.begin(), 0, &count, firstLine, nbLine);
+			partialFill(pizza, possibleParts, possibleParts.begin(), &count, firstLine, nbLine);
 			pizza = *bestPizza;
 			cerr << "Lignes " << firstLine << "-" << (firstLine + nbLine - 1)
 				<< " : points gagnés : " << (pizza.numberFilled - oldScore)
@@ -547,8 +602,9 @@ void fillParts(Pizza& pizza) {
 
 int main() {
 	
-	
-	//srand(time(NULL));
+	ifstream bestScoreFile("best.txt", ifstream::in);
+	bestScoreFile >> previousExecBest;
+	bestScoreFile.close();
 	
 	
 	Pizza pizza(cin);
