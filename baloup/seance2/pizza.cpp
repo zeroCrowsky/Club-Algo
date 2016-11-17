@@ -138,6 +138,20 @@ typedef struct Pizza {
 	}
 	
 	
+	
+	void fillWithInput(istream& in) {
+		int nbPart;
+		in >> nbPart;
+		for (int i = 0; i < nbPart; i++) {
+			PartRoyale part = PartRoyale::UNDEFINED;
+			in >> part.yMin >> part.xMin >> part.yMax >> part.xMax;
+			put(part);
+		}
+	}
+	
+	
+	
+	
 	bool basicCheckPart(const PartRoyale&el) {
 		if (el.xMax < el.xMin || el.yMax < el.yMin
 			|| (el.xMax - el.xMin + 1) * (el.yMax - el.yMin + 1) > maxRoyale
@@ -353,7 +367,7 @@ Pizza* bestPizza;
 
 
 
-
+/*
 void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector<PartRoyale>::iterator start, int recurCount, long long* count, int firstLine, int nbLine) {
 	
 	for (vector<PartRoyale>::iterator it = start; it != possibleParts.end(); ++it) {
@@ -372,41 +386,8 @@ void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector
 	}
 	
 }
+*/
 
-
-
-
-
-
-void partialFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector<PartRoyale>::iterator start, long long* count, int firstLine, int nbLine) {
-	
-	// on retire des parts de la partie qu'on veut traiter
-	for (int i = firstLine; i < firstLine + nbLine; i++) {
-		for (int j = 0; j < pizza.width; j++) {
-			if (pizza.matriceFilled[i][j] != PartRoyale::UNDEFINED)
-				pizza.remove(pizza.matriceFilled[i][j]);
-		}
-	}
-	
-	int sizeOfRange = nbLine * pizza.width;
-	
-	for (vector<PartRoyale>::iterator it = start;
-			it != possibleParts.end();
-			++it) {
-		if ((*it).yMin > firstLine
-			|| (*it).xMin >= sizeOfRange - (*bestPizza).numberFilledInRange(firstLine, nbLine)
-			) {
-			break;
-		}
-		if (pizza.canPut(*it, false)) {
-			pizza.put(*it);
-			recursiveFill(pizza, possibleParts, it + 1, 1, count, firstLine, nbLine);
-			pizza.remove(*it);
-		}
-		
-	}
-	
-}
 
 
 
@@ -516,28 +497,30 @@ void fillParts(Pizza& pizza) {
 	/*
 	 * Méthode glouton : on test toutes les combinaisons
 	 * possibles de toutes les parts plaçables
+	 * 
+	 * durée possible d'exécution : 100 000 milliards d'années x)
 	 */
 	
-	/*vector<PartRoyale> possibleParts;
+	vector<PartRoyale> possibleParts;
 	
 	
 
 	for (int y = 0; y < pizza.height; y++) {
 		for (int x = 0; x < pizza.width; x++) {
 			for (int w = 1; w <= pizza.maxRoyale; w++) {
-				//for (int h = 1; w*h <= pizza.maxRoyale; h++) {
-					int h = 1;
+				for (int h = 1; w*h <= pizza.maxRoyale; h++) {
 					PartRoyale el(x, x + w - 1, y, y + h - 1);
 					if (pizza.canPut(el, true)) {
 						possibleParts.push_back(el);
 					}
-				//}
+				}
 			}
 		}
 	}
 	
-	cerr << possibleParts.size() << endl;*/
+	cerr << "Parts possibles sur la pizza : " << possibleParts.size() << endl;
 	
+	/*
 	long long count = 0;
 	
 	for (int nbLine=1; nbLine<=pizza.height;) {
@@ -583,6 +566,50 @@ void fillParts(Pizza& pizza) {
 	cerr << "Fin du processus : nombre de comparaison = " << count << endl;
 	
 	//pizza = *bestPizza;
+	*/
+	
+	
+	
+	
+	cerr << "Score courant : " << pizza.numberFilled << endl;
+	while(1) {
+		// on essaye de positionner le plus de parts possibles dans les espaces libres
+		vector<PartRoyale> actualPossibleParts, previousPossibleParts = possibleParts;
+		do {
+			actualPossibleParts.clear();
+			for (vector<PartRoyale>::iterator it = possibleParts.begin(); it != possibleParts.end(); ++it) {
+				if (pizza.canPut(*it, false)) {
+					actualPossibleParts.push_back(*it);
+				}
+			}
+			
+			if (!actualPossibleParts.empty())
+				pizza.put(actualPossibleParts[rand() % actualPossibleParts.size()]);
+			
+			
+			previousPossibleParts = actualPossibleParts;
+		} while(!actualPossibleParts.empty());
+		
+		/*
+		 * On a rempli au maximum, on essaye de voir si on a une pizza avec un meilleur score
+		 */
+		if (pizza.numberFilled > bestPizza->numberFilled) {
+			cerr << "Nouveau score : " << pizza.numberFilled << endl;
+			pizza.outputToFile();
+			*bestPizza = pizza;
+		}
+		else {
+			pizza = *bestPizza;
+		}
+		
+		
+		if (!possibleParts.empty())
+			pizza.put(possibleParts[rand() % possibleParts.size()]);
+		
+		
+		
+	}
+	
 	
 }
 
@@ -602,15 +629,20 @@ void fillParts(Pizza& pizza) {
 
 int main() {
 	
+	srand(time(NULL));
+	
 	ifstream bestScoreFile("best.txt", ifstream::in);
 	bestScoreFile >> previousExecBest;
 	bestScoreFile.close();
 	
-	
 	Pizza pizza(cin);
 	
-	bestPizza = new Pizza(pizza);
+	stringstream ss; ss << previousExecBest;
+	ifstream bestPizzaFile("result"+ss.str()+".out", ifstream::in);
+	pizza.fillWithInput(bestPizzaFile);
+	bestPizzaFile.close();
 	
+	bestPizza = new Pizza(pizza);
 	
 	fillParts(pizza);
 	
