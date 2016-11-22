@@ -52,7 +52,7 @@ public class Datacenter {
 	
 
 	private final LocState[][] matrixState;
-	private final Server[][] matrixServers;
+	private final int[][] matrixServers;
 	private final Server[] servers;
 	public final int nbGroup;
 	
@@ -70,7 +70,10 @@ public class Datacenter {
 	        for (int i=0; i<nbRangee; i++) {
 	        	Arrays.fill(matrixState[i], LocState.EMPTY);
 	        }
-	        matrixServers = new Server[nbRangee][nbPlace];
+	        matrixServers = new int[nbRangee][nbPlace];
+	        for (int i=0; i<nbRangee; i++) {
+	        	Arrays.fill(matrixServers[i], -1);
+	        }
 	        
 	        for (int i = 0; i < nbIndisp; i++) {
 	            int rangee = s.nextInt(), empl = s.nextInt();
@@ -81,7 +84,7 @@ public class Datacenter {
 	        
 	        for (int i = 0; i < nbServers; i++) {
 	            int size = s.nextInt(), cap = s.nextInt();
-	            servers[i] = new Server(size, cap);
+	            servers[i] = new Server(size, cap, i);
 			}
 	        
 	        
@@ -103,12 +106,8 @@ public class Datacenter {
 		
 		
 		matrixServers = Arrays.copyOf(in.matrixServers, in.matrixServers.length);
-		for (int i = 0; i < matrixServers.length; i++) {
-			matrixServers[i] = new Server[in.matrixServers[i].length];
-			for (int j = 0; j < matrixServers[i].length; j++) {
-				matrixServers[i][j] = svOriginalToDest.get(in.matrixServers[i][j]);
-			}
-		}
+		for (int i = 0; i < matrixState.length; i++)
+			matrixServers[i] = Arrays.copyOf(matrixServers[i], matrixServers[i].length);
 		
 		nbGroup = in.nbGroup;
 	}
@@ -122,7 +121,7 @@ public class Datacenter {
 		for (int i = 0; i < matrixState.length; i++) {
 			for (int j = 0; j < matrixState[i].length; j++) {
 				matrixState[i][j] = bestDatacenter.matrixState[i][j];
-				matrixServers[i][j] = findEquivalentServer(bestDatacenter.matrixServers[i][j]);
+				matrixServers[i][j] = bestDatacenter.matrixServers[i][j];
 			}
 		}
 		
@@ -210,21 +209,23 @@ public class Datacenter {
 		return true;
 	}
 	
-	public void put(Server s, int r, int c) {
+	public boolean put(Server s, int r, int c) {
 		if (!canPutIgnoreOtherServers(s, r, c))
-			return;
+			return false;
 		if (s.isPlaced())
 			remove(s);
 
 		for (int curC = c; curC < c+s.size; curC++) {
-			if (matrixState[r][curC] == LocState.FULL)
-				remove(matrixServers[r][curC]);
+			if (matrixState[r][curC] == LocState.FULL) {
+				remove(servers[matrixServers[r][curC]]);
+			}
 			matrixState[r][curC] = LocState.FULL;
-			matrixServers[r][curC] = s;
+			matrixServers[r][curC] = s.index;
 		}
 
 		s.row = r;
 		s.col = c;
+		return true;
 	}
 	
 	public void remove(Server s) {
@@ -232,16 +233,12 @@ public class Datacenter {
 			return;
 		for (int curC = s.col; curC < s.col + s.size; curC++) {
 			matrixState[s.row][curC] = LocState.EMPTY;
-			matrixServers[s.row][curC] = null;
+			matrixServers[s.row][curC] = -1;
 		}
 		s.row = -1;
 		s.col = -1;
 	}
 	
-	
-	public void removeAtLoc(int r, int c) {
-		remove(matrixServers[r][c]);
-	}
 	
 	
 	private Pair<Integer, Integer> computeScore() {

@@ -2,15 +2,16 @@ package datastruct;
 public class Server {
 	int row = -1, col = -1;
 	public int group = -1;
-	public final int size, capacity;
+	public final int size, capacity, index;
 	
-	Server(int s, int c) {
+	Server(int s, int c, int i) {
 		size = s;
 		capacity = c;
+		index = i;
 	}
 	
 	Server(Server in) {
-		this(in.size, in.capacity);
+		this(in.size, in.capacity, in.index);
 		row = in.row;
 		col = in.col;
 		group = in.group;

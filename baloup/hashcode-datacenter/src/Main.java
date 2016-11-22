@@ -10,51 +10,32 @@ import datastruct.Datacenter;
 import datastruct.Server;
 
 public class Main {
+		
+	static Random rand = new Random();
 
 	public static void main(String[] args) throws IOException {
 		
-		Random r = new Random();
 		
 		Datacenter datacenter;
 		try (InputStream data = new FileInputStream("data.in")) {
 			datacenter = new Datacenter(data);
 		}
 		
-		List<Server> servers = Arrays.asList(datacenter.getServers());
-		
-		servers.sort((s1, s2) -> -Server.compareByProfitability(s1, s2));
-		
-		// placer les serveurs dans le datacentre
-		int currentRow = 0;
-		for (Server sv : servers) {
-			
-			
-			boolean put = false;
-			int tries = 0;
-			do {
-				currentRow = r.nextInt(datacenter.getNbRow());
-				int c = 0;
-				while(!datacenter.canPut(sv, currentRow, c) && c < datacenter.getNbCol())
-					c++;
-				if (datacenter.canPut(sv, currentRow, c)) {
-					datacenter.put(sv, currentRow, c);
-					put = true;
-				}
-				tries++;
-			} while(!put && tries < 100);
-			
-			//currentRow = (currentRow + 1) % datacenter.getNbRow();
-		}
+		randomPlaceServers(datacenter);
 
 		datacenter.display(System.out);
 		
-		
-		servers = servers.stream().filter(Server::isPlaced).collect(Collectors.toList());
+
+
+		List<Server> servers = Arrays.stream(datacenter.getServers())
+				.filter(Server::isPlaced)
+				.collect(Collectors.toList());
 		
 		
 		for (Server sv : servers) {
-			sv.group = r.nextInt(datacenter.nbGroup);
+			sv.group = rand.nextInt(datacenter.nbGroup);
 		}
+		
 		
 
 		datacenter.outputToFile();
@@ -78,13 +59,15 @@ public class Main {
 			s2.group = gtmp;
 			*/
 			
+			
+			
 			/*
 			 * Solution 2 : le pire groupe se voit attribué un serveur aléatoire en plus
 			 */
 			int minGroup = datacenter.getGroupWithMinScore();
 			Server sv;
 			do {
-				sv = servers.get(r.nextInt(servers.size()));
+				sv = servers.get(rand.nextInt(servers.size()));
 			} while(sv.group == minGroup);
 			
 			sv.group = minGroup;
@@ -93,9 +76,26 @@ public class Main {
 			datacenter.outputToFile();
 			Datacenter.setBest(datacenter);
 			
-			if (count % 50 == 0) {
+			
+			if (count % 50000 == 0) {
 				datacenter.restoreStateFromRuntimeBest();
+				randomPlaceServers(datacenter);
+				
+				servers = Arrays.stream(datacenter.getServers())
+						.filter(Server::isPlaced)
+						.collect(Collectors.toList());
+				
+				
+				for (Server svv : servers) {
+					if (!svv.isInGroup())
+						svv.group = rand.nextInt(datacenter.nbGroup);
+				}
+				
+				datacenter.outputToFile();
+				Datacenter.setBest(datacenter);
 			}
+			
+			
 			count++;
 		}
 		
@@ -103,6 +103,45 @@ public class Main {
 		
 		
 	}
+	
+	
+	
+	
+	static void randomPlaceServers(Datacenter datacenter) {
+		List<Server> servers = Arrays.asList(datacenter.getServers());
+		
+		while(
+				!datacenter.put(servers.get(rand.nextInt(servers.size())),
+						rand.nextInt(datacenter.getNbRow()),
+						rand.nextInt(datacenter.getNbCol()))
+				);
+		
+		servers.sort((s1, s2) -> -Server.compareByProfitability(s1, s2));
+		
+		// placer les serveurs dans le datacentre
+		int currentRow = 0;
+		for (Server sv : servers) {
+			if (sv.isPlaced()) continue;
+			
+			boolean put = false;
+			int tries = 0;
+			do {
+				currentRow = rand.nextInt(datacenter.getNbRow());
+				int c = 0;
+				while(!datacenter.canPut(sv, currentRow, c) && c < datacenter.getNbCol())
+					c++;
+				if (datacenter.canPut(sv, currentRow, c)) {
+					datacenter.put(sv, currentRow, c);
+					put = true;
+				}
+				tries++;
+			} while(!put && tries < 100);
+			
+			//currentRow = (currentRow + 1) % datacenter.getNbRow();
+		}
+	}
+	
+	
 	
 	
 	
