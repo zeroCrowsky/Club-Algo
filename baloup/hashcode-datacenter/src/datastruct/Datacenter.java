@@ -276,16 +276,6 @@ public class Datacenter {
 	
 	
 	
-	private Server findEquivalentServer(Server searchedSv) {
-		for(Server sv : servers)
-			if (sv.equivalent(searchedSv))
-				return sv;
-		return null;
-	}
-	
-	
-	
-	
 	
 	private enum LocState {
 		EMPTY("."), FULL("#"), UNAVAILABLE("X");
