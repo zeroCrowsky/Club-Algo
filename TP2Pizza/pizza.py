@@ -25,10 +25,10 @@ def check(h, s, piece) :
     if nr == 0 :
         return False
     nc = len(piece[0])
-    print("check nc * nr :", nc * nr, "s :", s)
+    #print("check nc * nr :", nc * nr, "s :", s)
     if nc * nr > s :
         return False
-    print("Lol")
+    #print("Lol")
     for i in range(nr) :
         for j in range(nc):
             cpth += 1 if piece[i][j] == 'H' else 0

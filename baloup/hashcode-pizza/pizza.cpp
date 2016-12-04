@@ -367,7 +367,7 @@ Pizza* bestPizza;
 
 
 
-/*
+
 void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector<PartRoyale>::iterator start, int recurCount, long long* count, int firstLine, int nbLine) {
 	
 	for (vector<PartRoyale>::iterator it = start; it != possibleParts.end(); ++it) {
@@ -381,12 +381,13 @@ void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector
 	
 	(*count)++; // comparison count
 	if (pizza.numberFilled > bestPizza->numberFilled) {
+		cerr << "Nouveau score : " << pizza.numberFilled << endl;
 		pizza.outputToFile();
 		*bestPizza = pizza;
 	}
 	
 }
-*/
+
 
 
 
@@ -520,9 +521,9 @@ void fillParts(Pizza& pizza) {
 	
 	cerr << "Parts possibles sur la pizza : " << possibleParts.size() << endl;
 	
-	/*
 	long long count = 0;
 	
+	/*
 	for (int nbLine=1; nbLine<=pizza.height;) {
 		for (int firstLine=0; firstLine+nbLine<=pizza.height; firstLine+=nbLine) {
 			
@@ -574,37 +575,18 @@ void fillParts(Pizza& pizza) {
 	cerr << "Score courant : " << pizza.numberFilled << endl;
 	while(1) {
 		// on essaye de positionner le plus de parts possibles dans les espaces libres
-		vector<PartRoyale> actualPossibleParts, previousPossibleParts = possibleParts;
-		do {
-			actualPossibleParts.clear();
-			for (vector<PartRoyale>::iterator it = possibleParts.begin(); it != possibleParts.end(); ++it) {
-				if (pizza.canPut(*it, false)) {
-					actualPossibleParts.push_back(*it);
-				}
+		vector<PartRoyale> actualPossibleParts;
+		for (vector<PartRoyale>::iterator it = possibleParts.begin(); it != possibleParts.end(); ++it) {
+			if (pizza.canPut(*it, false)) {
+				actualPossibleParts.push_back(*it);
 			}
-			
-			if (!actualPossibleParts.empty())
-				pizza.put(actualPossibleParts[rand() % actualPossibleParts.size()]);
-			
-			
-			previousPossibleParts = actualPossibleParts;
-		} while(!actualPossibleParts.empty());
-		
-		/*
-		 * On a rempli au maximum, on essaye de voir si on a une pizza avec un meilleur score
-		 */
-		if (pizza.numberFilled > bestPizza->numberFilled) {
-			cerr << "Nouveau score : " << pizza.numberFilled << endl;
-			pizza.outputToFile();
-			*bestPizza = pizza;
-		}
-		else {
-			pizza = *bestPizza;
 		}
 		
+		recursiveFill(pizza, actualPossibleParts, actualPossibleParts.begin(), 0, &count, 0, pizza.height);
 		
-		if (!possibleParts.empty())
-			pizza.put(possibleParts[rand() % possibleParts.size()]);
+		pizza = *bestPizza;
+		
+		pizza.put(possibleParts[rand() % possibleParts.size()]);
 		
 		
 		
