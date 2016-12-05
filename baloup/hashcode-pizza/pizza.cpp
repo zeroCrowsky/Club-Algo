@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <ctime>
 
 using namespace std;
 
@@ -344,6 +345,31 @@ typedef struct Pizza {
 	}
 	
 	
+	
+	bool isChunkFull(int xMin, int xMax, int yMin, int yMax) {
+		for (int x = xMin; x <= xMax; x++) {
+			for (int y = yMin; y <= yMax; y++) {
+				if (matriceFilled[y][x] == PartRoyale::UNDEFINED) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	void cleanChunk(bool inner, int xMin, int xMax, int yMin, int yMax) {
+		for (int x = xMin; x <= xMax; x++) {
+			for (int y = yMin; y <= yMax; y++) {
+				PartRoyale part = matriceFilled[y][x];
+				if (inner && (part.xMin < xMin || part.xMax > xMax
+					|| part.yMin < yMin ||part.yMax > yMax))
+					continue;
+				remove(part);
+			}
+		}
+	}
+	
+	
 } Pizza;
 
 
@@ -387,6 +413,12 @@ void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector
 	}
 	
 }
+
+
+
+
+
+
 
 
 
@@ -569,7 +601,8 @@ void fillParts(Pizza& pizza) {
 	//pizza = *bestPizza;
 	*/
 	
-	
+	int MIN_SIZE = 3;
+	int MAX_SIZE = 10;
 	
 	
 	cerr << "Score courant : " << pizza.numberFilled << endl;
@@ -582,12 +615,25 @@ void fillParts(Pizza& pizza) {
 			}
 		}
 		
-		recursiveFill(pizza, actualPossibleParts, actualPossibleParts.begin(), 0, &count, 0, pizza.height);
+		
+		if (actualPossibleParts.size() > 0
+			&& actualPossibleParts.size() < 250) {
+			cerr << "Parts possibles : " << actualPossibleParts.size() << endl;
+			recursiveFill(pizza, actualPossibleParts, actualPossibleParts.begin(), 0, &count, 0, pizza.height);
+		}
 		
 		pizza = *bestPizza;
 		
-		pizza.put(possibleParts[rand() % possibleParts.size()]);
-		
+		// pizza.put(possibleParts[rand() % possibleParts.size()]);
+		// remplacé par :
+		int xMin, xMax, yMin, yMax;
+		do {
+			xMin = rand() % (pizza.width - MIN_SIZE);
+			xMax = (rand() % min((pizza.width - MIN_SIZE) - xMin, MAX_SIZE)) + xMin + MIN_SIZE;
+			yMin = rand() % (pizza.height - MIN_SIZE);
+			yMax = (rand() % min((pizza.height - MIN_SIZE) - yMin, MAX_SIZE)) + yMin + MIN_SIZE;
+		} while(pizza.isChunkFull(xMin, xMax, yMin, yMax));
+		pizza.cleanChunk(true, xMin, xMax, yMin, yMax);
 		
 		
 	}
