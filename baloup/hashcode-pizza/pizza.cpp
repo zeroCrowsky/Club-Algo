@@ -601,7 +601,8 @@ void fillParts(Pizza& pizza) {
 		}
 		
 		
-		if (actualPossibleParts.size() > 0) {
+		if (actualPossibleParts.size() > 0
+			&& actualPossibleParts.size() < 300) {
 			if (actualPossibleParts.size() > 50)
 				cerr << "Parts possibles : " << actualPossibleParts.size() << endl;
 			recursiveFill(pizza, actualPossibleParts, actualPossibleParts.begin(), 0, &count, 0, pizza.height);
