@@ -587,7 +587,7 @@ void fillParts(Pizza& pizza) {
 	*/
 	
 	int MIN_SIZE = 2;
-	int MAX_SIZE = 5;
+	int MAX_SIZE = 10;
 	
 	
 	cerr << "Score courant : " << pizza.numberFilled << endl;
