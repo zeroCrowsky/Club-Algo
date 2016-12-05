@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <ctime>
 
 using namespace std;
 
@@ -392,6 +393,22 @@ void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector
 
 
 
+void cleanChunk(Pizza& pizza, int xMin, int xMax, int yMin, int yMax) {
+	for (int x = xMin; x <= xMax; x++) {
+		for (int y = yMin; y <= yMax; y++) {
+			PartRoyale part = pizza.matriceFilled[y][x];
+			if (part.xMin < xMin || part.xMax > xMax
+				|| part.yMin < yMin ||part.yMax > yMax)
+				continue;
+			pizza.remove(part);
+		}
+	}
+}
+
+
+
+
+
 void fillParts(Pizza& pizza) {
 	
 	/*
@@ -569,7 +586,8 @@ void fillParts(Pizza& pizza) {
 	//pizza = *bestPizza;
 	*/
 	
-	
+	int MIN_SIZE = 2;
+	int MAX_SIZE = 5;
 	
 	
 	cerr << "Score courant : " << pizza.numberFilled << endl;
@@ -582,12 +600,22 @@ void fillParts(Pizza& pizza) {
 			}
 		}
 		
-		recursiveFill(pizza, actualPossibleParts, actualPossibleParts.begin(), 0, &count, 0, pizza.height);
+		
+		if (actualPossibleParts.size() > 0) {
+			if (actualPossibleParts.size() > 50)
+				cerr << "Parts possibles : " << actualPossibleParts.size() << endl;
+			recursiveFill(pizza, actualPossibleParts, actualPossibleParts.begin(), 0, &count, 0, pizza.height);
+		}
 		
 		pizza = *bestPizza;
 		
-		pizza.put(possibleParts[rand() % possibleParts.size()]);
-		
+		// pizza.put(possibleParts[rand() % possibleParts.size()]);
+		// remplacé par :
+		int xMin = rand() % (pizza.width - MIN_SIZE);
+		int xMax = (rand() % min((pizza.width - MIN_SIZE) - xMin, MAX_SIZE)) + xMin + MIN_SIZE;
+		int yMin = rand() % (pizza.height - MIN_SIZE);
+		int yMax = (rand() % min((pizza.height - MIN_SIZE) - yMin, MAX_SIZE)) + yMin + MIN_SIZE;
+		cleanChunk(pizza, xMin, xMax, yMin, yMax);
 		
 		
 	}
