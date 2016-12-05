@@ -345,6 +345,31 @@ typedef struct Pizza {
 	}
 	
 	
+	
+	bool isChunkFull(int xMin, int xMax, int yMin, int yMax) {
+		for (int x = xMin; x <= xMax; x++) {
+			for (int y = yMin; y <= yMax; y++) {
+				if (matriceFilled[y][x] == PartRoyale::UNDEFINED) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	void cleanChunk(bool inner, int xMin, int xMax, int yMin, int yMax) {
+		for (int x = xMin; x <= xMax; x++) {
+			for (int y = yMin; y <= yMax; y++) {
+				PartRoyale part = matriceFilled[y][x];
+				if (inner && (part.xMin < xMin || part.xMax > xMax
+					|| part.yMin < yMin ||part.yMax > yMax))
+					continue;
+				remove(part);
+			}
+		}
+	}
+	
+	
 } Pizza;
 
 
@@ -393,17 +418,7 @@ void recursiveFill(Pizza& pizza, const vector<PartRoyale>& possibleParts, vector
 
 
 
-void cleanChunk(Pizza& pizza, int xMin, int xMax, int yMin, int yMax) {
-	for (int x = xMin; x <= xMax; x++) {
-		for (int y = yMin; y <= yMax; y++) {
-			PartRoyale part = pizza.matriceFilled[y][x];
-			if (part.xMin < xMin || part.xMax > xMax
-				|| part.yMin < yMin ||part.yMax > yMax)
-				continue;
-			pizza.remove(part);
-		}
-	}
-}
+
 
 
 
@@ -611,11 +626,14 @@ void fillParts(Pizza& pizza) {
 		
 		// pizza.put(possibleParts[rand() % possibleParts.size()]);
 		// remplacé par :
-		int xMin = rand() % (pizza.width - MIN_SIZE);
-		int xMax = (rand() % min((pizza.width - MIN_SIZE) - xMin, MAX_SIZE)) + xMin + MIN_SIZE;
-		int yMin = rand() % (pizza.height - MIN_SIZE);
-		int yMax = (rand() % min((pizza.height - MIN_SIZE) - yMin, MAX_SIZE)) + yMin + MIN_SIZE;
-		cleanChunk(pizza, xMin, xMax, yMin, yMax);
+		int xMin, xMax, yMin, yMax;
+		do {
+			xMin = rand() % (pizza.width - MIN_SIZE);
+			xMax = (rand() % min((pizza.width - MIN_SIZE) - xMin, MAX_SIZE)) + xMin + MIN_SIZE;
+			yMin = rand() % (pizza.height - MIN_SIZE);
+			yMax = (rand() % min((pizza.height - MIN_SIZE) - yMin, MAX_SIZE)) + yMin + MIN_SIZE;
+		} while(pizza.isChunkFull(xMin, xMax, yMin, yMax));
+		pizza.cleanChunk(true, xMin, xMax, yMin, yMax);
 		
 		
 	}
