@@ -6,3 +6,4 @@ data_part.in
 result*.out
 best.txt
 *.ppm
+*.o
