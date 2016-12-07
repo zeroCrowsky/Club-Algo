@@ -492,109 +492,7 @@ void exactFill(Pizza& pizza, vector<PartRoyale>& possibleParts, int firstLine, i
 
 
 
-void fillParts(Pizza& pizza) {
-	
-	/*
-	 * Méthode random (max au bout de 5 minutes : 3400)
-	 */ /*
-	int windowHeight = pizza.height;
-	
-	int bestScore = 0;
-	
-	while (pizza.numberFilled < pizza.numberMax) {
-		Point firstFreePoint = pizza.getFirstFreePoint();
-		int minY = firstFreePoint.x;
-		int maxY = minY + windowHeight;
-		
-		int w = (rand() % pizza.maxRoyale) + 1;
-		int h = (rand() % (pizza.maxRoyale / w)) + 1;
-		
-		int x = rand() % (pizza.width - w);
-		int y = rand() % (windowHeight - h) + minY;
-		
-		PartRoyale part(x, x+w-1, y, y+h-1);
-		
-		if (pizza.canPut(part, true))
-			pizza.put(part);
-		else
-			continue;
-		
-		if (pizza.numberFilled > bestScore) {
-			bestScore = pizza.numberFilled;
-			pizza.displayPizza(cerr);
-		}
-	}
-	*/
-	
-	
-	
-	
-	/*
-	 * Méthode : on rempli tout avec les plus petites parts possible
-	 * puis on agrandit les parts existantes
-	 * Max : environ 8200 selon l'ordre d'agrandissement des parts
-	 */ /*
-	
-	
-	for (int h = 1; h <= pizza.maxRoyale; h++) {
-		for (int w = 1; w*h <= pizza.maxRoyale; w++) {
-			for (int y = 0; y < pizza.height - h + 1; y++) {
-				for (int x = 0; x < pizza.width - w + 1; x++) {
-					PartRoyale el(x, x + w - 1, y, y + h - 1);
-					if (pizza.canPut(el, false)) {
-						pizza.put(el);
-					}
-				}
-			}
-		}
-	}
-	
-	
-	
-	for (int i = 0; i < pizza.parts.size(); i++) {
-		PartRoyale el = pizza.remove(0);
-		
-		
-		PartRoyale tested(el);
-		
-		
-		tested = el;
-		do {
-			el = tested;
-			tested.yMin--;
-		} while(pizza.canPut(tested, false));
-		
-		
-		tested = el;
-		do {
-			el = tested;
-			tested.xMin--;
-		} while(pizza.canPut(tested, false));
-		
-		
-		tested = el;
-		do {
-			el = tested;
-			tested.xMax++;
-		} while(pizza.canPut(tested, false));
-		
-		
-		tested = el;
-		do {
-			el = tested;
-			tested.yMax++;
-		} while(pizza.canPut(tested, false));
-		
-		
-		
-		pizza.put(el);
-		
-	}
-	*/
-	
-	
-	
-	
+void fillParts(Pizza& pizza, int xMin, int xMax, int yMin, int yMax) {
 	
 	cerr << "Parts possibles sur la pizza : " << pizza.possibleParts->size() << endl; 
 	
@@ -631,16 +529,18 @@ void fillParts(Pizza& pizza) {
 	
 	
 	
-	// cerr << "End. possibleParts=" << possibleParts.size() << endl;
-	
-	//pizza = *bestPizza;
-	
-	
 	int MIN_SIZE = 7;
 	int MAX_SIZE = 15;
 	
 	
 	cerr << "Score courant : " << pizza.numberFilled << endl;
+	
+	// on prends en compte les paramètres [xy]M(in|ax)
+	if (!pizza.isChunkFull(xMin, xMax, yMin, yMax)) {
+		cerr << "Prise en compte des arguments xMin, xMax, yMin, yMax" << endl;
+		pizza.cleanChunk(true, xMin, xMax, yMin, yMax);
+	}
+	
 	while(1) {
 		// on essaye de positionner le plus de parts possibles dans les espaces libres
 		vector<PartRoyale> actualPossibleParts;
@@ -651,8 +551,7 @@ void fillParts(Pizza& pizza) {
 		}
 		
 		
-		if (actualPossibleParts.size() > 0
-			&& actualPossibleParts.size() < 300) {
+		if (actualPossibleParts.size() > 0) {
 			cerr << "Parts possibles : " << actualPossibleParts.size() << endl;
 			exactFill(pizza, actualPossibleParts, 0, pizza.height);
 		}
@@ -661,7 +560,6 @@ void fillParts(Pizza& pizza) {
 		
 		// pizza.put(possibleParts[rand() % possibleParts.size()]);
 		// remplacé par :
-		int xMin, xMax, yMin, yMax;
 		do {
 			xMin = rand() % (pizza.width - MIN_SIZE);
 			xMax = (rand() % min((pizza.width - MIN_SIZE) - xMin, MAX_SIZE)) + xMin + MIN_SIZE;
@@ -716,7 +614,19 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 	
-	fillParts(pizza); // ça ne fini jamais
+	int xMin = 0, xMax = 0, yMin = 0, yMax = 0;
+	if (argc > 4) {
+		xMin = atoi(argv[1]);
+		xMax = atoi(argv[2]);
+		yMin = atoi(argv[3]);
+		yMax = atoi(argv[4]);
+		cerr << "xMin=" << xMin
+			<< " xMax=" << xMax
+			<< " yMin=" << yMin
+			<< " yMax=" << yMax << endl;
+	}
+	
+	fillParts(pizza, xMin, xMax, yMin, yMax); // ça ne fini jamais
 	
 }
 
