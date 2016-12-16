@@ -7,3 +7,6 @@ result*.out
 best.txt
 *.ppm
 *.o
+*.lp
+*.mip
+glpk-4.60

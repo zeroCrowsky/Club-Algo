@@ -72,14 +72,19 @@ int previousExecBest;
 	Structure de données PartRoyale
 */
 typedef struct PartRoyale {
+	int index;
 	int xMin;
 	int xMax;
 	int yMin;
 	int yMax;
-	PartRoyale(int xMin_, int xMax_, int yMin_, int yMax_) : xMin(xMin_), xMax(xMax_), yMin(yMin_), yMax(yMax_) { }
+	PartRoyale(int index_, int xMin_, int xMax_, int yMin_, int yMax_) : index(index_), xMin(xMin_), xMax(xMax_), yMin(yMin_), yMax(yMax_) { }
 	
 	void print(ostream& out) const {
 		out << yMin << " " << xMin << " " << yMax << " " << xMax << endl;
+	}
+	
+	int getArea() const {
+		return (xMax - xMin + 1) * (yMax - yMin + 1);
 	}
 	
 	#ifdef __linux__
@@ -88,13 +93,27 @@ typedef struct PartRoyale {
 	}
 	#endif
 	
+	bool collideWith(PartRoyale& o) {
+		return !(xMin > o.xMax || xMax < o.xMin || yMin > o.yMax || yMax < o.yMin);
+	}
+	
 	static PartRoyale UNDEFINED;
+	
+	static bool compareByCenterPosition(const PartRoyale p1, const PartRoyale p2) {
+		float x1 = (p1.xMin + p1.xMax) / 2.0;
+		float y1 = (p1.yMin + p1.yMax) / 2.0;
+		float x2 = (p2.xMin + p2.xMax) / 2.0;
+		float y2 = (p2.yMin + p2.yMax) / 2.0;
+		if (y1 == y2)
+			return (x1 < x2);
+		return (y1 < y2);
+		
+	}
 } PartRoyale;
-PartRoyale PartRoyale::UNDEFINED(-1, -1, -1, -1);
+PartRoyale PartRoyale::UNDEFINED(-1, -1, -1, -1, -1);
 
 inline bool operator==(const PartRoyale& p1, const PartRoyale& p2){ return (p1.xMin == p2.xMin && p1.xMax == p2.xMax && p1.yMin == p2.yMin && p1.yMax == p2.yMax); }
 inline bool operator!=(const PartRoyale& p1, const PartRoyale& p2){ return !(p1 == p2); }
-
 
 /*
 	Structure de données Pizza
@@ -106,8 +125,10 @@ typedef struct Pizza {
 	vector<vector<PartRoyale> > matriceFilled;
 	vector<PartRoyale> parts;
 	vector<PartRoyale>* possibleParts;
+	vector<vector<vector<int> > >* matriceCollision;
 	int numberFilled;
 	int numberMax;
+	int numberHam;
 	
 	/*
 	Pizza(const Pizza& copied) {
@@ -122,7 +143,7 @@ typedef struct Pizza {
 		numberMax = copied.numberMax;
 	}*/
 	
-	Pizza(istream& in) : numberFilled(0) {
+	Pizza(istream& in, bool (*partRoyaleComp)(PartRoyale, PartRoyale)) : numberFilled(0) {
 		in >> height >> width >> ham >> maxRoyale;
 		
 		numberMax = height * width;
@@ -130,30 +151,35 @@ typedef struct Pizza {
 		matriceCanPut = new vector<vector<bool> >();
 		possibleParts = new vector<PartRoyale>();
 		matriceHam = new vector<vector<bool> >();
+		matriceCollision = new vector<vector<vector<int> > >();
 		
 		for (int i=0; i<height ; i++) {
 			vector<bool> ligneJambon;
 			vector<bool> lignePut;
+			vector<vector<int> > ligneCollision;
 			vector<PartRoyale> ligneFilled;
 			for (int j=0; j<width; j++) {
 				char ch;
 				in >> ch;
-				ligneJambon.push_back(ch == 'H');
+				bool ham = ch == 'H';
+				if (ham) numberHam++;
+				ligneJambon.push_back(ham);
 				lignePut.push_back(false);
+				ligneCollision.push_back(vector<int>());
 				ligneFilled.push_back(PartRoyale::UNDEFINED);
 			}
 			
 			matriceHam->push_back(ligneJambon);
 			matriceCanPut->push_back(lignePut);
+			matriceCollision->push_back(ligneCollision);
 			matriceFilled.push_back(ligneFilled);
 		}
 		
-
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
 				for (int w = 1; w <= maxRoyale; w++) {
 					for (int h = 1; w*h <= maxRoyale; h++) {
-						PartRoyale el(x, x + w - 1, y, y + h - 1);
+						PartRoyale el(0, x, x + w - 1, y, y + h - 1);
 						if (canPut(el, true)) {
 							possibleParts->push_back(el);
 							for (int xP = el.xMin; xP <= el.xMax; xP++) {
@@ -166,6 +192,17 @@ typedef struct Pizza {
 				}
 			}
 		}
+		sort(possibleParts->begin(), possibleParts->end(), partRoyaleComp);
+		for (int i = 0; i < possibleParts->size(); i++) {
+			(*possibleParts)[i].index = i;
+			PartRoyale el = (*possibleParts)[i];
+			for (int xP = el.xMin; xP <= el.xMax; xP++) {
+				for (int yP = el.yMin; yP <= el.yMax; yP++) {
+					(*matriceCollision)[yP][xP].push_back(i);
+				}
+			}
+		}
+		
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
 				if (!(*matriceCanPut)[y][x])
@@ -486,6 +523,173 @@ void exactFill(Pizza& pizza, vector<PartRoyale>& possibleParts, int firstLine, i
 
 
 
+void linearFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
+	cerr << "Linear solving: creating lp file..." << endl;
+	// écriture du fichier d'entrée de GLPK
+	ofstream of("glpk_in.lp", ofstream::out);
+	of << "Maximize" << endl << "  obj: ";
+	for (vector<PartRoyale>::iterator it = possibleParts.begin(); it != possibleParts.end(); ++it) {
+		of << " +" << (*it).getArea() << " x" << (*it).index;
+	}
+	of << endl << "Subject To" << endl;
+	for (int r = 0; r < pizza.height; r++) {
+		for (int c = 0; c < pizza.width; c++) {
+			stringstream ss;
+			bool atLeastOne = false;
+			for (int i = 0; i < (*(pizza.matriceCollision))[r][c].size(); i++) {
+				int indexPart = (*(pizza.matriceCollision))[r][c][i];
+				if (find(possibleParts.begin(), possibleParts.end(), (*(pizza.possibleParts))[indexPart]) != possibleParts.end()) {
+					ss << " +x" << indexPart;
+					atLeastOne = true;
+				}
+			}
+			if (atLeastOne) {
+				of << "  c" << r << "_" << c << ": " << ss.str() << " <= 1" << endl;
+			}
+		}
+	}
+	of << "Binary" << endl;
+	for (vector<PartRoyale>::iterator it = possibleParts.begin(); it != possibleParts.end(); ++it) {
+		of << " x" << (*it).index << endl;
+	}
+	of << "End" << endl;
+	of.close();
+	cerr << "Linear solving: running glpsol..." << endl;
+	#ifdef __linux__
+	
+	#else
+		system("\"glpk-4.60\\w64\\glpsol.exe\" --lp --exact -w glpk_out.mip glpk_in.lp");
+	#endif
+	cerr << "Linear solving: glpsol ended" << endl;
+	
+	cerr << "Linear solving: reading slpk_out.mip" << endl;
+	ifstream ifs("glpk_out.mip", ifstream::in);
+	if (!ifs.good()) {
+		cerr << "Linear solving: can't read output file" << endl;
+		return;
+	}
+	char line[256];
+	do {
+		ifs.getline(line, 256);
+	} while (string(line) != string("c"));
+	
+	string s1; // inutile sauf pour passer les tokens
+	int nbI, nbJ, score;
+	ifs >> s1 >> s1 >> nbI >> nbJ >> s1 >> score;
+	for (int i = 0; i < nbI; i++) ifs >> s1 >> s1 >> s1;
+	// on lit les lignes "j N N"
+	for (int i = 0; i < nbJ; i++) {
+		int indexPart, counted;
+		ifs >> s1 >> indexPart >> counted;
+		if (counted) {
+			pizza.put(possibleParts[indexPart]);
+		}
+	}
+	ifs.close();
+	cerr << "Linear solving: slice added to pizza" << endl;
+	
+	
+	if (pizza.numberFilled >= bestPizza->numberFilled) {
+		cerr << "Nouveau score : " << pizza.numberFilled << endl;
+		pizza.outputToFile();
+		*bestPizza = pizza;
+	}
+	cerr << "Linear solving: end" << endl;
+	
+}
+
+
+
+
+
+
+
+
+
+void branchAndBoundFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
+	
+	struct Combinaison{
+		vector<int> indexParts; int score;
+		
+		// toutes les comparaisons sont inversés !!!!!
+		// pour la fonction de tri
+		bool operator==(const Combinaison& o) const { return score == o.score; };
+		bool operator<(const Combinaison& o) const { return score > o.score; };
+		bool operator>(const Combinaison& o) const { return score < o.score; };
+		bool operator<=(const Combinaison& o) const { return score >= o.score; };
+		bool operator>=(const Combinaison& o) const { return score <= o.score; };
+		bool operator!=(const Combinaison& o) const { return score != o.score; };
+		// attention valeur de retour inversés
+		// -------------------------------------------
+	};
+	
+	
+	// max 3672 octets / combinaison
+	// max  918  parts / combinaison
+	// 300000 * 3672 = 1 101 600 000 octets
+	unsigned int n = 300000;
+	
+	vector<Combinaison> cmbPossibles;
+	cmbPossibles.push_back(Combinaison());
+	
+	
+	for (int iPart = 0; iPart < possibleParts.size(); iPart++) {
+		PartRoyale p = possibleParts[iPart];
+		// on parcours tous les cas possibles actuels (mais pas les nouvelles qu'on ajoute)
+		int nbPreviousCmb = cmbPossibles.size();
+		for (int iCmb = 0; iCmb < nbPreviousCmb; iCmb++) {
+			Combinaison c = cmbPossibles[iCmb];
+			// on vérifie si la part courante peut être ajoutée à la combinaison actuelle sans
+			// entrer en collision avec aucune part
+			bool collide = false;
+			for (int iPartCmb = c.indexParts.size() - 1; !collide && iPartCmb >= 0; iPartCmb--) {
+				PartRoyale pCmb = (*pizza.possibleParts)[c.indexParts[iPartCmb]];
+				collide = p.collideWith(pCmb);
+			}
+			if (!collide) {
+				Combinaison c2 = c;
+				c2.indexParts.push_back(p.index);
+				c2.score += p.getArea();
+				cmbPossibles.push_back(c2);
+			}
+		}
+		sort(cmbPossibles.begin(), cmbPossibles.end());
+		
+		int newNbCombine = cmbPossibles.size();
+		if (cmbPossibles.size() > n)
+			cmbPossibles.resize(n);
+		
+		// appliquer la meilleure combi sur la pizza
+		for (int iCmb = 0; iCmb < cmbPossibles[0].indexParts.size(); iCmb++) {
+			PartRoyale pCmb = (*pizza.possibleParts)[cmbPossibles[0].indexParts[iCmb]];
+			pizza.put(pCmb);
+		}
+		
+		cerr << "Slice " << iPart << "/" << possibleParts.size()
+			<< " - PreviousNbCmb=" << nbPreviousCmb
+			<< " - CurrentNbCmb=" << newNbCombine << "(max=" << n << ")"
+			<< " - BestCmb=" << cmbPossibles[0].score
+			<< " - WorstCmb=" << cmbPossibles[cmbPossibles.size() - 1].score
+			<< " - CurrentPizzaScore=" << pizza.numberFilled
+			<< endl;
+		
+		if (pizza.numberFilled > bestPizza->numberFilled) {
+			cerr << "Nouveau score : " << pizza.numberFilled << endl;
+			pizza.outputToFile();
+			*bestPizza = pizza;
+		}
+	}
+	
+	
+	
+	
+	
+	
+	
+}
+
+
+
 
 
 
@@ -502,12 +706,10 @@ void fillParts(Pizza& pizza, int xMin, int xMax, int yMin, int yMax) {
 	for (int line=0; line<pizza.height; line++) {
 		
 		vector<PartRoyale> possibleParts;
-		for (int x = 0; x < pizza.width; x++) {
-			for (int w = 1; w <= pizza.maxRoyale; w++) {
-				PartRoyale el(x, x + w - 1, line, line);
-				if (pizza.canPut(el, false)) {
-					possibleParts.push_back(el);
-				}
+		for (int i = 0; i < (*(pizza.possibleParts)).size(); i++) {
+			PartRoyale p = (*(pizza.possibleParts))[i];
+			if (p.yMax == line && p.yMin == p.yMax && pizza.canPut(p, false)) {
+				possibleParts.push_back(p);
 			}
 		}
 		
@@ -519,7 +721,7 @@ void fillParts(Pizza& pizza, int xMin, int xMax, int yMin, int yMax) {
 		int oldScore = pizza.numberFilled;
 		
 		
-		exactFill(pizza, possibleParts, line, 1);
+		linearFill(pizza, possibleParts);
 		pizza = *bestPizza;
 		cerr << "Lignes " << line
 			<< " : points gagnés : " << (pizza.numberFilled - oldScore)
@@ -529,8 +731,8 @@ void fillParts(Pizza& pizza, int xMin, int xMax, int yMin, int yMax) {
 	
 	
 	
-	int MIN_SIZE = 7;
-	int MAX_SIZE = 15;
+	int MIN_SIZE = 10;
+	int MAX_SIZE = 20;
 	
 	
 	cerr << "Score courant : " << pizza.numberFilled << endl;
@@ -553,7 +755,7 @@ void fillParts(Pizza& pizza, int xMin, int xMax, int yMin, int yMax) {
 		
 		if (actualPossibleParts.size() > 0) {
 			cerr << "Parts possibles : " << actualPossibleParts.size() << endl;
-			exactFill(pizza, actualPossibleParts, 0, pizza.height);
+			linearFill(pizza, actualPossibleParts);
 		}
 		
 		pizza = *bestPizza;
@@ -567,7 +769,6 @@ void fillParts(Pizza& pizza, int xMin, int xMax, int yMin, int yMax) {
 			yMax = (rand() % min((pizza.height - MIN_SIZE) - yMin, MAX_SIZE)) + yMin + MIN_SIZE;
 		} while(pizza.isChunkFull(xMin, xMax, yMin, yMax));
 		pizza.cleanChunk(true, xMin, xMax, yMin, yMax);
-		
 		
 	}
 	
@@ -596,7 +797,9 @@ int main(int argc, char** argv) {
 	bestScoreFile >> previousExecBest;
 	bestScoreFile.close();
 	
-	Pizza pizza(cin);
+	Pizza pizza(cin, PartRoyale::compareByCenterPosition);
+	
+	cerr << "Nombre de jambon : " << pizza.numberHam << endl;
 	
 	stringstream ss; ss << previousExecBest;
 	ifstream bestPizzaFile("result"+ss.str()+".out", ifstream::in);
@@ -626,7 +829,14 @@ int main(int argc, char** argv) {
 			<< " yMax=" << yMax << endl;
 	}
 	
-	fillParts(pizza, xMin, xMax, yMin, yMax); // ça ne fini jamais
+	// fillParts(pizza, xMin, xMax, yMin, yMax); // ça ne fini jamais
+	
+	branchAndBoundFill(pizza, (*pizza.possibleParts));
+	
+	
+	
+	
+	
 	
 }
 
