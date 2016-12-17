@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <ctime>
+#include <cstdint>
 
 using namespace std;
 
@@ -609,7 +610,7 @@ void linearFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
 void branchAndBoundFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
 	
 	struct Combinaison{
-		vector<int> indexParts; int score;
+		vector<uint32_t> indexParts; uint32_t score;
 		
 		// toutes les comparaisons sont inversés !!!!!
 		// pour la fonction de tri
@@ -627,13 +628,16 @@ void branchAndBoundFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
 	// max 3672 octets / combinaison
 	// max  918  parts / combinaison
 	// 300000 * 3672 = 1 101 600 000 octets
-	unsigned int n = 300000;
+	uint64_t nBase = 300000, n;
 	
 	vector<Combinaison> cmbPossibles;
 	cmbPossibles.push_back(Combinaison());
 	
 	
 	for (int iPart = 0; iPart < possibleParts.size(); iPart++) {
+		uint64_t nMult = (possibleParts.size() / (iPart + 1));
+		n = nBase * sqrt(nMult);
+		
 		PartRoyale p = possibleParts[iPart];
 		// on parcours tous les cas possibles actuels (mais pas les nouvelles qu'on ajoute)
 		int nbPreviousCmb = cmbPossibles.size();
@@ -666,7 +670,6 @@ void branchAndBoundFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
 		}
 		
 		cerr << "Slice " << iPart << "/" << possibleParts.size()
-			<< " - PreviousNbCmb=" << nbPreviousCmb
 			<< " - CurrentNbCmb=" << newNbCombine << "(max=" << n << ")"
 			<< " - BestCmb=" << cmbPossibles[0].score
 			<< " - WorstCmb=" << cmbPossibles[cmbPossibles.size() - 1].score
