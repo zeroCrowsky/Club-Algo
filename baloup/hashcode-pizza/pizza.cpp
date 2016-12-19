@@ -680,9 +680,9 @@ void branchAndBoundFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
 	
 	// max 3672 octets / combinaison
 	// max  918  parts / combinaison
-	uint64_t nBase = 1000;
+	uint64_t nBase = 100;
 	// 300000 combinaisons = environ 1 Go RAM
-	unsigned int n = 500; // 50000
+	unsigned int n; // 500
 	// prépare la toute première itération
 	ogzstream ofs(babFileName(0).c_str(), ios::out | ios::binary);
 	write_uint32_t(ofs, 0); // P
@@ -707,11 +707,11 @@ void branchAndBoundFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
 		for (uint32_t iPart = nextPartInFile; iPart < possibleParts.size(); iPart++) {
 			PartRoyale p = possibleParts[iPart];
 			// score minimum d'une combinaison pour la part
-			int minCmbScore = max(0.f, pizza.width * (p.getCenterY() - (pizza.maxRoyale / 2)) - 800);
+			int minCmbScore = max(0.f, pizza.width * (p.getCenterY() - (pizza.maxRoyale / 2)) - 500);
 			
 			int nbCombiStart = cmbPossibles.size();
 			
-			double nMult = possibleParts.size() / (iPart + 1);
+			double nMult = possibleParts.size() / (double)(iPart + 1);
 			
 			n = nBase * nMult;
 			
@@ -816,6 +816,7 @@ void branchAndBoundFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
 		}
 		ofsNext.close();
 		ifs.close();
+		system((string("rm ")+babFileName(iGlobal)).c_str());
 	}
 }
 

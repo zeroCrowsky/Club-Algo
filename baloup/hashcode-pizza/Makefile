@@ -51,4 +51,4 @@ ${BINARIES}:
 
 
 # ----- les exécutables à produire -----
-pizza: pizza.opp gzstream.o
+pizza: pizza.opp gzstream.opp
