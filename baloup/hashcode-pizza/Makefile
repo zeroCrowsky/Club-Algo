@@ -7,11 +7,14 @@ ARCHIVE=TP4_Baloup_Badiane.zip
 BINARIES = pizza
 
 # commande de compilation
-CC      = g++
+CCPP      = g++
+CC      = gcc
 
 # options de compilation (.o et linkage)
-CFLAGS  = -O3 -std=c++0x
+CPPFLAGS  = -O3 -std=c++11
+CFLAGS  = -O3 -std=c11
 
+LDLIBS = -lz
 
 
 
@@ -25,7 +28,9 @@ all: ${BINARIES}
 #LDLIBS  = -L${LIBDIR} $(addprefix -l,$(LIBS))
 
 # Compilation séparée
-%.o: %.cpp
+%.opp: %.cpp
+	${CCPP} ${CPPFLAGS} -o $@ -c $<
+%.o: %.c
 	${CC} ${CFLAGS} -c $<
 
 clean:
@@ -38,12 +43,12 @@ archive: clean
 .PHONY: all clean archive
 
 ${BINARIES}:
-	${CC} ${CFLAGS} -o $@ $^
-#${CC} ${CFLAGS} -o $@ $^ ${LDLIBS}
+	${CCPP} ${CPPFLAGS} -o $@ $^ ${LDLIBS}
+#${CC} ${CFLAGS} -o $@ $^
 # ======================================
 
 
 
 
 # ----- les exécutables à produire -----
-pizza: pizza.o
+pizza: pizza.opp gzstream.o

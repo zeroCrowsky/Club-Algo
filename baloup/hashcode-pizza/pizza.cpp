@@ -8,6 +8,7 @@
 #include <sstream>
 #include <ctime>
 #include <cstdint>
+#include "gzstream.h"
 
 using namespace std;
 
@@ -98,17 +99,21 @@ typedef struct PartRoyale {
 		return !(xMin > o.xMax || xMax < o.xMin || yMin > o.yMax || yMax < o.yMin);
 	}
 	
+	float getCenterX() const {
+		return (xMin + xMax) / 2.0;
+	}
+	float getCenterY() const {
+		return (yMin + yMax) / 2.0;
+	}
+	
 	static PartRoyale UNDEFINED;
 	
 	static bool compareByCenterPosition(const PartRoyale p1, const PartRoyale p2) {
-		float x1 = (p1.xMin + p1.xMax) / 2.0;
-		float y1 = (p1.yMin + p1.yMax) / 2.0;
-		float x2 = (p2.xMin + p2.xMax) / 2.0;
-		float y2 = (p2.yMin + p2.yMax) / 2.0;
+		float y1 = p1.getCenterY();
+		float y2 = p2.getCenterY();
 		if (y1 == y2)
-			return (x1 < x2);
+			return (p1.getCenterX() < p2.getCenterX());
 		return (y1 < y2);
-		
 	}
 } PartRoyale;
 PartRoyale PartRoyale::UNDEFINED(-1, -1, -1, -1, -1);
@@ -604,13 +609,43 @@ void linearFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
 
 
 
+string babFileName(int iGlobal) {
+	stringstream ss; ss << iGlobal;
+	return "bab"+ss.str()+".tmp";
+}
 
+void write_uint32_t(ostream& ofs, uint32_t value) {
+	ofs.write((char*)&value, sizeof(uint32_t));
+}
+void write_vectorOfuint32_t(ostream& ofs, vector<uint32_t>& values) {
+	ofs.write((char*)&(values[0]), values.size() * sizeof(uint32_t));
+}
 
+uint32_t read_uint32_t(istream& ifs) {
+	uint32_t value;
+	ifs.read((char*)&value, sizeof(uint32_t));
+	return value;
+}
 
 void branchAndBoundFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
 	
 	struct Combinaison{
 		vector<uint32_t> indexParts; uint32_t score;
+		
+		void writeToFile(ostream &ofs) {
+			write_uint32_t(ofs, score); // S
+			write_uint32_t(ofs, indexParts.size()); // Nn
+			write_vectorOfuint32_t(ofs, indexParts); // I
+		}
+		
+		void fillWithInput(istream &ifs) {
+			score = read_uint32_t(ifs);
+			indexParts.clear();
+			uint32_t size = read_uint32_t(ifs);
+			for (int i = 0; i < size; i++) {
+				indexParts.push_back(read_uint32_t(ifs));
+			}
+		}
 		
 		// toutes les comparaisons sont inversés !!!!!
 		// pour la fonction de tri
@@ -625,70 +660,163 @@ void branchAndBoundFill(Pizza& pizza, vector<PartRoyale>& possibleParts) {
 	};
 	
 	
+	/*
+		Format des fichiers babX.tmp
+		X = le numéro d'itération principale
+		en binaire
+		tous les entiers en uint32_t
+		
+		pour chaque part pour lequel on stocke au moins une combinaison
+			P			index de la part
+			N			nombre de combinaison à lire
+			pour chaque combinaison
+				S		score de la combinaison
+				Nn		nombre de part dans la combinaison
+				pour chaque part
+					I	son index
+		
+	*/
+	
+	
 	// max 3672 octets / combinaison
 	// max  918  parts / combinaison
-	// 300000 * 3672 = 1 101 600 000 octets
-	uint64_t nBase = 300000, n;
+	uint64_t nBase = 1000;
+	// 300000 combinaisons = environ 1 Go RAM
+	unsigned int n = 500; // 50000
+	// prépare la toute première itération
+	ogzstream ofs(babFileName(0).c_str(), ios::out | ios::binary);
+	write_uint32_t(ofs, 0); // P
+	write_uint32_t(ofs, 1); // N
+	Combinaison().writeToFile(ofs);
+	ofs.close();
 	
-	vector<Combinaison> cmbPossibles;
-	cmbPossibles.push_back(Combinaison());
 	
-	
-	for (int iPart = 0; iPart < possibleParts.size(); iPart++) {
-		uint64_t nMult = (possibleParts.size() / (iPart + 1));
-		n = nBase * sqrt(nMult);
+	for (int iGlobal = 0; ; iGlobal++) {
+		// fichier d'entrée pour l'itération courante
+		igzstream ifs(babFileName(iGlobal).c_str(), ios::in | ios::binary);
+		// fichier de sortie de l'itération courante
+		ogzstream ofsNext(babFileName(iGlobal+1).c_str(), ios::out | ios::binary);
+		vector<Combinaison> cmbPossibles;
+		int32_t nextPartInFile = read_uint32_t(ifs);
+		cerr << ifs.tellg() << endl;
+		if (!ifs.good()) {
+			break;
+		}
+		bool nextPartInFileWaiting = true;
 		
-		PartRoyale p = possibleParts[iPart];
-		// on parcours tous les cas possibles actuels (mais pas les nouvelles qu'on ajoute)
-		int nbPreviousCmb = cmbPossibles.size();
-		for (int iCmb = 0; iCmb < nbPreviousCmb; iCmb++) {
-			Combinaison c = cmbPossibles[iCmb];
-			// on vérifie si la part courante peut être ajoutée à la combinaison actuelle sans
-			// entrer en collision avec aucune part
-			bool collide = false;
-			for (int iPartCmb = c.indexParts.size() - 1; !collide && iPartCmb >= 0; iPartCmb--) {
-				PartRoyale pCmb = (*pizza.possibleParts)[c.indexParts[iPartCmb]];
-				collide = p.collideWith(pCmb);
+		for (uint32_t iPart = nextPartInFile; iPart < possibleParts.size(); iPart++) {
+			PartRoyale p = possibleParts[iPart];
+			// score minimum d'une combinaison pour la part
+			int minCmbScore = max(0.f, pizza.width * (p.getCenterY() - (pizza.maxRoyale / 2)) - 800);
+			
+			int nbCombiStart = cmbPossibles.size();
+			
+			double nMult = possibleParts.size() / (iPart + 1);
+			
+			n = nBase * nMult;
+			
+			uint32_t nbCombiToAdd = 0;
+			// récupération des combinaisons depuis le fichier
+			if (nextPartInFileWaiting && nextPartInFile == iPart) {
+				nbCombiToAdd = read_uint32_t(ifs);
+				for (int iCmbFile = 0; iCmbFile < nbCombiToAdd; iCmbFile++) {
+					Combinaison c;
+					c.fillWithInput(ifs);
+					cmbPossibles.push_back(c);
+				}
+				if (ifs.good()) {
+					nextPartInFile = read_uint32_t(ifs);
+					nextPartInFileWaiting = ifs.good();
+				}
+				else {
+					ifs.close();
+					nextPartInFileWaiting = false;
+				}
 			}
-			if (!collide) {
-				Combinaison c2 = c;
-				c2.indexParts.push_back(p.index);
-				c2.score += p.getArea();
-				cmbPossibles.push_back(c2);
+			if (cmbPossibles.size() == 0 && iGlobal > 0 && nextPartInFileWaiting && nextPartInFile > iPart) {
+				cerr << "It=" << iGlobal
+					<< " Sl=" << iPart
+					<< " No combination for this slice. Jumping to slice " << nextPartInFile
+					<< endl;
+				iPart = nextPartInFile-1; // sera réincrémenté à l'itération suivante (instruction boucle for)
+				continue;
+			}
+			if (cmbPossibles.size() == 0 && (iGlobal == 0 || !nextPartInFileWaiting || nextPartInFile <= iPart)) {
+				cerr << "It=" << iGlobal
+					<< " Sl=" << iPart
+					<< " Finished prematurely. No combination available for current slice."
+					<< endl;
+				break;
+			}
+			int nbIntermediateCmb = cmbPossibles.size();
+			
+			// on parcours tous les cas possibles actuels (mais pas les nouvelles qu'on ajoute au fur et à mesure)
+			for (int iCmb = 0; iCmb < nbIntermediateCmb; iCmb++) {
+				Combinaison c = cmbPossibles[iCmb];
+				// on vérifie si la part courante peut être ajoutée à la combinaison actuelle sans
+				// entrer en collision avec aucune part
+				bool collide = false;
+				for (int iPartCmb = c.indexParts.size() - 1; !collide && iPartCmb >= 0; iPartCmb--) {
+					PartRoyale pCmb = (*pizza.possibleParts)[c.indexParts[iPartCmb]];
+					collide = p.collideWith(pCmb);
+				}
+				if (!collide) {
+					Combinaison c2 = c;
+					c2.indexParts.push_back(p.index);
+					c2.score += p.getArea();
+					cmbPossibles.push_back(c2);
+				}
+			}
+			sort(cmbPossibles.begin(), cmbPossibles.end());
+			uint32_t newNbCombine = cmbPossibles.size();
+			// on filtre les combinaisons à un score trop faible (par rapport à la part actuelle)
+			while (cmbPossibles.size() > 0 && cmbPossibles[cmbPossibles.size()-1].score < minCmbScore) {
+				cmbPossibles.pop_back();
+			}
+			
+			uint32_t newNbAfterRemoveUseless = cmbPossibles.size();
+			uint32_t nbPartToRemove = 0;
+			if (cmbPossibles.size() > n) {
+				// sauvegarder dans le fichier
+				write_uint32_t(ofsNext, iPart+1);
+				nbPartToRemove = cmbPossibles.size() - n;
+				write_uint32_t(ofsNext, nbPartToRemove);
+				for (int iCmb = n; iCmb < cmbPossibles.size(); iCmb++) {
+					cmbPossibles[iCmb].writeToFile(ofsNext);
+				}
+				cmbPossibles.resize(n);
+			}
+			
+			
+			cerr << "It=" << iGlobal
+				<< " Sl=" << iPart << "/" << possibleParts.size()
+				<< " Cmb(Start=" << nbCombiStart
+					<< " FromFile=" << nbCombiToAdd
+					<< " Gen=" << (newNbCombine-nbIntermediateCmb)
+					<< " RemUnderMin=" << (newNbCombine-newNbAfterRemoveUseless)
+					<< " Total=" << newNbAfterRemoveUseless
+					<< " Max=" << n
+					<< " ToFile=" << nbPartToRemove
+				<< ") MinCmb=" << minCmbScore
+				<< " WorstCmb=" << ((cmbPossibles.size() > 0) ? cmbPossibles[cmbPossibles.size() - 1].score : 0)
+				<< " BestCmb=" << ((cmbPossibles.size() > 0) ? cmbPossibles[0].score : 0)
+				<< " BestScore=" << (*bestPizza).numberFilled
+				<< endl;
+			
+			if (cmbPossibles[0].score > bestPizza->numberFilled) {
+				// appliquer la meilleure combi sur la pizza
+				for (int iCmb = 0; iCmb < cmbPossibles[0].indexParts.size(); iCmb++) {
+					PartRoyale pCmb = (*pizza.possibleParts)[cmbPossibles[0].indexParts[iCmb]];
+					pizza.put(pCmb);
+				}
+				cerr << "Nouveau score : " << pizza.numberFilled << endl;
+				pizza.outputToFile();
+				*bestPizza = pizza;
 			}
 		}
-		sort(cmbPossibles.begin(), cmbPossibles.end());
-		
-		int newNbCombine = cmbPossibles.size();
-		if (cmbPossibles.size() > n)
-			cmbPossibles.resize(n);
-		
-		// appliquer la meilleure combi sur la pizza
-		for (int iCmb = 0; iCmb < cmbPossibles[0].indexParts.size(); iCmb++) {
-			PartRoyale pCmb = (*pizza.possibleParts)[cmbPossibles[0].indexParts[iCmb]];
-			pizza.put(pCmb);
-		}
-		
-		cerr << "Slice " << iPart << "/" << possibleParts.size()
-			<< " - CurrentNbCmb=" << newNbCombine << "(max=" << n << ")"
-			<< " - BestCmb=" << cmbPossibles[0].score
-			<< " - WorstCmb=" << cmbPossibles[cmbPossibles.size() - 1].score
-			<< " - CurrentPizzaScore=" << pizza.numberFilled
-			<< endl;
-		
-		if (pizza.numberFilled > bestPizza->numberFilled) {
-			cerr << "Nouveau score : " << pizza.numberFilled << endl;
-			pizza.outputToFile();
-			*bestPizza = pizza;
-		}
+		ofsNext.close();
+		ifs.close();
 	}
-	
-	
-	
-	
-	
-	
-	
 }
 
 
