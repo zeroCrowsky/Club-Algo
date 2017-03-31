@@ -1,3 +1,6 @@
+import java.util.ArrayList;
+import java.util.List;
+
 public class Main {
 	
 	public static void main(String[] args) {
@@ -34,27 +37,66 @@ public class Main {
 			}
 		}*/
 		
-		Journey j = in.journeys.get(0);
-
-		String h1 = in.hyperloopClosestTo(j.ville1);
-		String h2 = in.hyperloopClosestTo(j.ville2);
-
-		int h1index = in.hyperloopLine.indexOf(h1);
-		int h2index = in.hyperloopLine.indexOf(h2);
-
-		int start = Math.min(h1index, h2index);
-		int end = Math.max(h1index, h2index);
 		
-		double hyperloopTime = 0;
 		
-		for (int i = start; i < end; i++) {
-			hyperloopTime += in.timeHyperLoopSimple(in.hyperloopLine.get(i), in.hyperloopLine.get(i + 1));
+		for (int nbStop = 2; nbStop < 10; nbStop++) {
+			
+			List<String> hyperloop = new ArrayList<>();
+			for (int i = 0; i < nbStop; i++) hyperloop.add(null);
+			
+			doLoop(nbStop, 0, in, hyperloop, () -> {
+				
+				
+				
+				
+				int nbFasterInHyperloop = 0;
+				
+				for (Journey j : in.journeys) {
+					
+					String h1 = in.hyperloopClosestTo(j.ville1, hyperloop);
+					String h2 = in.hyperloopClosestTo(j.ville2, hyperloop);
+
+					int h1index = in.hyperloopLine.indexOf(h1);
+					int h2index = in.hyperloopLine.indexOf(h2);
+
+					int start = Math.min(h1index, h2index);
+					int end = Math.max(h1index, h2index);
+					
+					double hyperloopTime = 0;
+					
+					for (int i = start; i < end; i++) {
+						hyperloopTime += in.timeHyperLoopSimple(in.hyperloopLine.get(i), in.hyperloopLine.get(i + 1));
+					}
+
+					double timeStart = in.tempsVoiture(j.ville1, h1);
+					double timeEnd = in.tempsVoiture(j.ville2, h2);
+					
+					if (hyperloopTime + timeEnd + timeStart < j.carTime)
+						nbFasterInHyperloop++;
+					
+					
+				}
+				
+				if (nbFasterInHyperloop >= in.n) {
+					System.out.print(hyperloop.size());
+					for (String h : hyperloop) {
+						System.out.print(" " + h);
+					}
+					System.out.println();
+				}
+				
+				
+			});
+			
+			
 		}
-
-		double timeStart = in.tempsVoiture(j.ville1, h1);
-		double timeEnd = in.tempsVoiture(j.ville2, h2);
 		
-		System.out.println(Math.round(hyperloopTime + timeEnd + timeStart));
+		
+		
+		
+		
+		
+		
 		
 		
 		
@@ -62,5 +104,44 @@ public class Main {
 		
 		
 	}
+	
+	
+	
+	
+	public static void doLoop(int deepTotal, int deepCurrent, Input in, List<String> hyperloop, Runnable r) {
+		
+		for (String ville : in.villes.keySet()) {
+			
+			if (hyperloop.contains(ville))
+				continue;
+			
+			hyperloop.set(deepCurrent, ville);
+			
+			double hyperloopDist = 0;
+			
+			for (int i = 0; i < deepCurrent - 1; i++) {
+				hyperloopDist += in.distance(hyperloop.get(i), hyperloop.get(i + 1));
+			}
+			
+			if (hyperloopDist >= in.d)
+				break;
+			
+			if (deepCurrent < deepTotal - 1) {
+				doLoop(deepTotal, deepCurrent+1, in, hyperloop, r);
+			}
+			else
+				r.run();
+		}
+		
+		hyperloop.set(deepCurrent, null);
+		
+	}
+	
+	
+	
+	
+	
+	
+	
 	
 }

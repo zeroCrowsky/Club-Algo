@@ -48,11 +48,6 @@ public class Input {
 		String name1 = s.next(), name2 = s.next();
 		journeys.add(new Journey(name1, name2, 0));
 		*/
-
-		nb = s.nextInt();
-		for (int i = 0; i < nb; i++) {
-			journeys.add(new Journey(s.next(), s.next(), s.nextInt()));
-		}
 		
 		
 		n = s.nextInt();
