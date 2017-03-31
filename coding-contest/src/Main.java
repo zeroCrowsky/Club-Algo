@@ -1,26 +1,40 @@
-import java.awt.Point;
-
 public class Main {
 	
 	public static void main(String[] args) {
 		
-		InputL2 in = new InputL2(System.in);
+		Input in = new Input(System.in);
+		
+		
+		
+		for (String hyp1 : in.villes.keySet()) {
+			for (String hyp2 : in.villes.keySet()) {
+				if (hyp1.equals(hyp2))
+					continue;
+				int nbFasterInHyperloop = 0;
+				
+				for (Journey j : in.journeys) {
+					String h1 = in.closestTo(j.ville1, hyp1, hyp2);
+					String h2 = in.closestTo(j.ville2, hyp1, hyp2);
+					
+					double tHyperloop = in.timeHyperLoopSimple(h1, h2);
 
-		Point start = in.points.get(in.villeStart);
-		Point end = in.points.get(in.villeEnd);
-
-		Point h1 = in.points.get(in.closestToStart());
-		Point h2 = in.points.get(in.closestToEnd());
+					double tStart = in.tempsVoiture(j.ville1, h1);
+					double tEnd = in.tempsVoiture(j.ville2, h2);
+					
+					if (tHyperloop + tStart + tEnd < j.carTime) {
+						nbFasterInHyperloop++;
+					}
+					
+				}
+				
+				if (nbFasterInHyperloop >= in.n)
+					System.out.println(hyp1 + " " + hyp2);
+				
+				
+			}
+		}
 		
 		
-		
-		
-		double timeHyperloop = h1.distance(h2) / 250 + 200;
-		double before = start.distance(h1) / 15;
-		double after = end.distance(h2) / 15;
-		
-		
-		System.out.println(Math.round(timeHyperloop + before + after));
 	}
 	
 }
