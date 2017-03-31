@@ -12,9 +12,9 @@ public class InputL2 {
 	Map<String, Point> points = new HashMap<>();
 	
 	
-	String ville1d, ville2a;
+	String villeStart, villeEnd;
 	
-	String ville1h, ville2h;
+	String villeHyp1, villeHpy2;
 	
 	
 	
@@ -29,14 +29,37 @@ public class InputL2 {
 			points.put(name, p);
 		}
 		
-		ville1h = s.next();
-		ville2h = s.next();
+		villeStart = s.next();
+		villeEnd = s.next();
+		
+		villeHyp1 = s.next();
+		villeHpy2 = s.next();
 	}
 	
 	
-	public double distance() {
-		return points.get(ville1h).distance(points.get(ville2h));
+	public double distanceHyperloop() {
+		return points.get(villeHyp1).distance(points.get(villeHpy2));
 	}
+	
+
+	
+	public String closestToStart() {
+		Point start = points.get(villeStart);
+		Point h1 = points.get(villeHyp1);
+		Point h2 = points.get(villeHpy2);
+		
+		return (start.distance(h1) < start.distance(h2)) ? villeHyp1 : villeHpy2;
+	}
+	
+	public String closestToEnd() {
+		Point end = points.get(villeEnd);
+		Point h1 = points.get(villeHyp1);
+		Point h2 = points.get(villeHpy2);
+		
+		return (end.distance(h1) < end.distance(h2)) ? villeHyp1 : villeHpy2;
+	}
+	
+	
 	
 	
 	
