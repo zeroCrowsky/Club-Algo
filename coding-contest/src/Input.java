@@ -14,8 +14,7 @@ public class Input {
 	
 	public List<Journey> journeys = new ArrayList<>();
 	
-	int n;
-	
+	public List<String> hyperloopLine = new ArrayList<>();
 	
 	public Input(InputStream in) {
 		@SuppressWarnings("resource")
@@ -29,6 +28,7 @@ public class Input {
 			villes.put(name, p);
 		}
 		
+		/*
 		nb = s.nextInt();
 
 		for (int i = 0; i < nb; i++) {
@@ -36,8 +36,18 @@ public class Input {
 			int time = s.nextInt();
 			journeys.add(new Journey(name1, name2, time));
 		}
+		*/
+
+		String name1 = s.next(), name2 = s.next();
+		journeys.add(new Journey(name1, name2, 0));
 		
-		n = s.nextInt();
+
+		nb = s.nextInt();
+		for (int i = 0; i < nb; i++) {
+			hyperloopLine.add(s.next());
+		}
+		
+		
 	}
 	
 	
@@ -62,12 +72,20 @@ public class Input {
 	
 
 	
-	public String closestTo(String vStart, String villeHyp1, String villeHpy2) {
-		Point start = villes.get(vStart);
-		Point h1 = villes.get(villeHyp1);
-		Point h2 = villes.get(villeHpy2);
+	public String hyperloopClosestTo(String vStart) {
 		
-		return (start.distance(h1) < start.distance(h2)) ? villeHyp1 : villeHpy2;
+		String closest = hyperloopLine.get(0);
+		double distClosest = distance(vStart, closest);
+		
+		for (int i = 1; i < hyperloopLine.size(); i++) {
+			double dist = distance(vStart, hyperloopLine.get(i));
+			if (dist < distClosest) {
+				distClosest = dist;
+				closest = hyperloopLine.get(i);
+			}
+		}
+		
+		return closest;
 	}
 	
 	
