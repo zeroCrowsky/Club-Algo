@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class Main {
 	
@@ -38,8 +39,23 @@ public class Main {
 		}*/
 		
 		
+		/*
 		
-		for (int nbStop = 2; nbStop < 10; nbStop++) {
+		Random r = new Random();
+		for (;;) {
+			int nb = r.nextInt(30);
+			List<String> hyperloop = new ArrayList<>();
+			for (int i = 0; i < nb; i++) {
+				
+			}
+		}
+		
+		*/
+		
+		
+		
+		
+		for (int nbStop = 2; nbStop <= 100; nbStop++) {
 			
 			List<String> hyperloop = new ArrayList<>();
 			for (int i = 0; i < nbStop; i++) hyperloop.add(null);
@@ -56,8 +72,8 @@ public class Main {
 					String h1 = in.hyperloopClosestTo(j.ville1, hyperloop);
 					String h2 = in.hyperloopClosestTo(j.ville2, hyperloop);
 
-					int h1index = in.hyperloopLine.indexOf(h1);
-					int h2index = in.hyperloopLine.indexOf(h2);
+					int h1index = hyperloop.indexOf(h1);
+					int h2index = hyperloop.indexOf(h2);
 
 					int start = Math.min(h1index, h2index);
 					int end = Math.max(h1index, h2index);
@@ -65,7 +81,7 @@ public class Main {
 					double hyperloopTime = 0;
 					
 					for (int i = start; i < end; i++) {
-						hyperloopTime += in.timeHyperLoopSimple(in.hyperloopLine.get(i), in.hyperloopLine.get(i + 1));
+						hyperloopTime += in.timeHyperLoopSimple(hyperloop.get(i), hyperloop.get(i + 1));
 					}
 
 					double timeStart = in.tempsVoiture(j.ville1, h1);
@@ -83,15 +99,23 @@ public class Main {
 						System.out.print(" " + h);
 					}
 					System.out.println();
+					System.out.println("   nbfaster = " + nbFasterInHyperloop);
+
+					double hyperloopDist = 0;
+					
+					for (int i = 0; i < hyperloop.size() - 1; i++) {
+						hyperloopDist += in.distance(hyperloop.get(i), hyperloop.get(i + 1));
+					}
+					
+					System.out.println("   hyperloopDist = " + hyperloopDist);
 				}
+				
 				
 				
 			});
 			
 			
 		}
-		
-		
 		
 		
 		
@@ -119,12 +143,12 @@ public class Main {
 			
 			double hyperloopDist = 0;
 			
-			for (int i = 0; i < deepCurrent - 1; i++) {
+			for (int i = 0; i < deepCurrent; i++) {
 				hyperloopDist += in.distance(hyperloop.get(i), hyperloop.get(i + 1));
 			}
 			
 			if (hyperloopDist >= in.d)
-				break;
+				continue;
 			
 			if (deepCurrent < deepTotal - 1) {
 				doLoop(deepTotal, deepCurrent+1, in, hyperloop, r);
