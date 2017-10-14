@@ -6,8 +6,8 @@ public class Jam2016_Qualif_ProblemB {
 
 	public static void main(String[] args) throws Exception {
 
-		try (Scanner s = new Scanner(new File("B-small-practice.in"))) {
-			try (PrintStream out = System.out) {// new PrintStream("B-small.out")) {
+		try (Scanner s = new Scanner(new File("B-large-practice.in"))) {
+			try (PrintStream out = new PrintStream("B-large.out")) {
 				
 				int t = s.nextInt();
 				
@@ -20,8 +20,12 @@ public class Jam2016_Qualif_ProblemB {
 						if (inStr.toCharArray()[c] == '+')
 							continue;
 						
-						if (inStr.toCharArray()[0] == '+') {
-							inStr = flipN(inStr, 1);
+						int nb = 0;
+						for (int cc = 0; cc < c && inStr.toCharArray()[cc] == '+'; cc++)
+							nb++;
+						
+						if (nb > 0) {
+							inStr = flipN(inStr, nb);
 							System.out.println(inStr);
 							count++;
 						}
