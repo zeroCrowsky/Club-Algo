@@ -1,3 +1,5 @@
+package p1_saving_the_universe_again;
+
 import java.util.Scanner;
 
 public class Solution {

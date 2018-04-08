@@ -1,3 +1,5 @@
+package p2_trouble_sort;
+
 import java.io.BufferedInputStream;
 import java.util.Scanner;
 

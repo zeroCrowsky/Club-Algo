@@ -1,3 +1,5 @@
+package p4_cubic_ufo;
+
 import java.util.Scanner;
 
 public class Solution {

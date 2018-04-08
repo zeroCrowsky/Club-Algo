@@ -1,3 +1,5 @@
+package p4_cubic_ufo;
+
 
 public class Test {
 
