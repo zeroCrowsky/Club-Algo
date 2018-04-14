@@ -2,6 +2,4 @@
 
 * Université Lille 1
 
-Ce dépôt permet de partagé tous les travaux efféctué lors des sessions du club d'algorithmique de Lille 1.
-
-Au programme résolution de multiples problèmes proposé par Kattis, HashCode Google, ...
+Ce dépôt permet de partager tous les travaux effectués lors des sessions du club d'algorithmique de L'Université de Lille et lors des concours de programmations tels que Google Hash Code, Catalist coding contest, Code Jam, ... .
