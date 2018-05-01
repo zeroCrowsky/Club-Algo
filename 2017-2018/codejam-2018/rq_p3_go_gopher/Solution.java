@@ -1,4 +1,4 @@
-package p3_go_gopher;
+package rq_p3_go_gopher;
 
 import java.io.PrintStream;
 import java.util.Scanner;

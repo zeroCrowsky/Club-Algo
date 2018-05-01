@@ -1,4 +1,4 @@
-package p4_cubic_ufo;
+package rq_p4_cubic_ufo;
 
 import java.util.Scanner;
 

@@ -1,6 +1,8 @@
-package p2_trouble_sort;
+package rq_p2_trouble_sort;
 
 import java.io.BufferedInputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class Solution {
@@ -11,15 +13,24 @@ public class Solution {
 			int n = s.nextInt();
 			for (int i = 0; i < n; i++) {
 				int nn = s.nextInt();
-				int[] v = new int[nn];
-				for (int j = 0; j < nn; j++)
-					v[j] = s.nextInt();
 				
-				troubleSort(v);
+				List<Integer> v1 = new ArrayList<>(nn / 2 + 1);
+				List<Integer> v2 = new ArrayList<>(nn / 2);
+				
+				for (int j = 0; j < nn; j++) {
+					if (j % 2 == 0)
+						v1.add(s.nextInt());
+					else
+						v2.add(s.nextInt());
+				}
+				
+				v1.sort(null);
+				v2.sort(null);
 				
 				int error = -1;
 				for (int j = 0; j < nn - 1; j++) {
-					if (v[j] > v[j + 1]) {
+					boolean jPair = j % 2 == 0;
+					if ((jPair ? v1 : v2).get(j / 2) > (jPair ? v2 : v1).get((j + 1) / 2)) {
 						error = j;
 						break;
 					}
@@ -28,20 +39,5 @@ public class Solution {
 				System.out.println("Case #" + (i + 1) + ": " + (error == -1 ? "OK" : error));
 			}
 		}
-	}
-	
-	public static void troubleSort(int[] v) {
-		boolean ok;
-		do {
-			ok = true;
-			for (int i = 0; i < v.length - 2; i++) {
-				if (v[i] > v[i + 2]) {
-					int tmp = v[i + 2];
-					v[i + 2] = v[i];
-					v[i] = tmp;
-					ok = false;
-				}
-			}
-		} while (!ok);
 	}
 }

@@ -1,4 +1,4 @@
-package p1_rounding_error;
+package r1b_p1_rounding_error;
 
 import java.util.ArrayList;
 import java.util.List;

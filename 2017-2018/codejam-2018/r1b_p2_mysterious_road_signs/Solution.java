@@ -1,13 +1,11 @@
-package p2_mysterious_road_signs;
+package r1b_p2_mysterious_road_signs;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 /*
- * 
  * Actually not a solution
- *
  */
 public class Solution {
 	
