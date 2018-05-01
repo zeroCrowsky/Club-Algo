@@ -1,9 +1,14 @@
-package p2;
+package p2_mysterious_road_signs;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+/*
+ * 
+ * Actually not a solution
+ *
+ */
 public class Solution {
 	
 	public static void main(String[] args) {
