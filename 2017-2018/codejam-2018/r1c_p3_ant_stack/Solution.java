@@ -1,8 +1,7 @@
 package r1c_p3_ant_stack;
 
 import java.io.BufferedInputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class Solution {
@@ -23,74 +22,36 @@ public class Solution {
 		for (int i = 0; i < N; i++)
 			W[i] = in.nextInt();
 		
-		List<ListLong> stacks = new ArrayList<>();
-		int longestOfStacks = 0;
+		long[][] g = new long[N][140]; // max 120 Mb (10^5 * 150 * 8)
+
+		Arrays.fill(g[0], Long.MAX_VALUE);
+		g[0][0] = 0;
+		g[0][1] = W[0];
 		
-		stacks.add(new ListLong());
-		
-		for (int i = 0; i < N; i++) {
-			int I = i;
-			long currW = W[i];
-			long maxSupportedW = 6 * currW;
-			
-			List<ListLong> tempL = new ArrayList<>();
-			for (ListLong lW : stacks) {
-				long sum = lW.sum;
-				if (sum > maxSupportedW)
-					continue;
+		for (int x = 1; x < N; x++) {
+			Arrays.fill(g[x], Long.MAX_VALUE);
+			g[x][0] = 0;
+			for (int y = 1; y < 140; y++) {
+				if (g[x-1][y-1] == Long.MAX_VALUE)
+					break;
+				long vNotAdded = g[x-1][y]; // if current not added
+				long vAdded = g[x-1][y-1]; // if current added
 				
-				ListLong newL = new ListLong(lW);
-				newL.add(currW);
-				tempL.add(newL);
-				longestOfStacks = Math.max(longestOfStacks, newL.count);
-			}
-			
-			stacks.addAll(tempL);
-			int los = longestOfStacks;
-			stacks.removeIf(l -> l.count < los - (N - I));
-			
-			stacks.sort((l1, l2) -> Long.compare(l1.sum, l2.sum));
-			for (int j = 1; j < stacks.size();) {
-				ListLong l1 = stacks.get(j-1);
-				ListLong l2 = stacks.get(j);
-				if (l1.sum != l2.sum) {
-					j++;
-					continue;
-				}
-				if (l1.count >= l2.count)
-					stacks.remove(j);
+				if (vAdded <= 6 * W[x]) // current can be added
+					g[x][y] = Math.min(vNotAdded, vAdded + W[x]);
 				else
-					stacks.remove(j-1);
+					g[x][y] = vNotAdded;
+				
+				
 			}
 		}
 		
+		for (int i = 139; i >= 0; i--)
+			if (g[N-1][i] < Long.MAX_VALUE)
+				return "" + i;
 		
-		return "" + stacks.stream().mapToInt(l -> l.count).max().orElse(0);
+		
+		return "0";
 	}
-	
-	
-	
-	static class ListLong {
-		long sum;
-		int count;
-		
-		public ListLong() {
-			sum = 0;
-			count = 0;
-		}
-		
-		public ListLong(ListLong o) {
-			sum = o.sum;
-			count = o.count;
-		}
-		
-		public void add(long v) {
-			sum += v;
-			count++;
-		}
-		
-	}
-	
-	
 	
 }
