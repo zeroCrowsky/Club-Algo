@@ -17,12 +17,8 @@ public class Solution {
 				List<Integer> v1 = new ArrayList<>(nn / 2 + 1);
 				List<Integer> v2 = new ArrayList<>(nn / 2);
 				
-				for (int j = 0; j < nn; j++) {
-					if (j % 2 == 0)
-						v1.add(s.nextInt());
-					else
-						v2.add(s.nextInt());
-				}
+				for (int j = 0; j < nn; j++)
+					(j % 2 == 0 ? v1 : v2).add(s.nextInt());
 				
 				v1.sort(null);
 				v2.sort(null);

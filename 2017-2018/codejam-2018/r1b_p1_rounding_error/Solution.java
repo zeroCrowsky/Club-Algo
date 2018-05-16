@@ -1,5 +1,6 @@
 package r1b_p1_rounding_error;
 
+import java.io.BufferedInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -9,7 +10,7 @@ public class Solution {
 	
 	public static void main(String[] args) {
 		
-		try (Scanner s = new Scanner(System.in)) {
+		try (Scanner s = new Scanner(new BufferedInputStream(System.in))) {
 			int T = s.nextInt();
 			for (int t = 0; t < T; t++) {
 				int N = s.nextInt();
