@@ -2,17 +2,16 @@ import java.util.Scanner;
 
 public class simon {
 
+	private static Scanner in;
+	static final String simonSays = "simon says ";
+
 	public static void main(String[] args) {
-		Scanner s = new Scanner(System.in);
-		int nb = s.nextInt();
-		s.nextLine();
+		in = new Scanner(System.in);
+		int nb = in.nextInt();
+		in.nextLine();
 		for (int i=0; i<nb; i++) {
-			String in = s.nextLine();
-			if (in.startsWith("simon says ")) {
-				System.out.println(in.substring("simon says ".length()));
-			}
-			else
-				System.out.println();
+			String line = in.nextLine();
+			System.out.println(line.startsWith(simonSays) ? line.substring(simonSays.length()) : "");
 		}
 		
 		

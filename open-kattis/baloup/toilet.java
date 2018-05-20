@@ -1,9 +1,11 @@
 import java.util.Scanner;
 
 public class toilet {
+	private static Scanner s;
+
 	public static void main(String[] args) {
 
-		Scanner s = new Scanner(System.in);
+		s = new Scanner(System.in);
 		String in = s.nextLine();
 		
 		boolean initState = in.charAt(0) == 'U';
