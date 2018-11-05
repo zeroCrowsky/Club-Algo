@@ -25,13 +25,13 @@ public class aliennumbers {
 			}
 			
 			// reconvertir en base cible
-			long divisé = decValue, diviseur = outputLang.length, quotient, reste;
+			long divise = decValue, diviseur = outputLang.length, quotient, reste;
 			List<Character> output = new ArrayList<>();
 			do {
-				quotient = divisé / diviseur;
-				reste = divisé % diviseur;
+				quotient = divise / diviseur;
+				reste = divise % diviseur;
 				output.add(0, outputLang[(int)reste]);
-				divisé = quotient;
+				divise = quotient;
 			} while (quotient != 0);
 			
 			System.out.print("Case #"+(cs+1)+": ");
