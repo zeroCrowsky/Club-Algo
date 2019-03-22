@@ -24,7 +24,17 @@ public class Building {
 	List<Point> backboneCells = new ArrayList<Point>();
 	List<Point> routersCells = new ArrayList<Point>();
 	
+	public int moneySpend = 0;
+	
+	public boolean loopRunning = false;
+	
+	public int currentScore = 0;
+	
+	
+	
 	String inputFileName;
+	
+	View view;
 
 	public Building(Scanner in, String f) {
 		inputFileName = f;
@@ -56,77 +66,159 @@ public class Building {
 		
 		updateRouterCovering();
 		
-		outputImage("start");
+		// outputImage("start");
+		
+		if (view != null)
+			view.update();
 	}
 	
+	long lastUpdateCall = System.currentTimeMillis();
 
-	public void greedy() {
+	public void fillWithRouters() {
+		loopRunning = true;
 		
-		int moneySpend = 0;
-		for(int i = 0; ; i++) {
+		for(int i = 0; loopRunning; i++) {
 			System.out.println("Iteration " + i + "...");
 			
+			if (!placeBestRouterWithBackbone())
+				break;
 			
-			int bestR = -1, bestC = -1;
-			long bestScore = Long.MIN_VALUE;
-			int bestCost = 0;
-			
-			for (int r = 0; r < H; r++) {
-				for (int c = 0; c < W; c++) {
-					if (!coverable[r][c])
-						continue;
-					int cost = bDist[r][c] * Pb + Pr;
-					if (cost + moneySpend > B)
-						continue;
-					long score = 1000 * routerCovering[r][c] - cost;
-					if (score > bestScore) {
-						bestScore = score;
-						bestR = r;
-						bestC = c;
-						bestCost = cost;
-					}
+
+			if (view != null) {
+				if (lastUpdateCall < System.currentTimeMillis() - 1000) {
+					view.update();
+					lastUpdateCall = System.currentTimeMillis();
 				}
 			}
-			
-			if (bestR == -1 || bestScore < 0) {
-				break;
-			}
-			
-			System.out.println("bestScore=" + bestScore + " best="+bestR+";"+bestC+ " routerCovering=" + routerCovering[bestR][bestC]);
-			
-			routersCells.add(new Point(bestR, bestC));
-			computeRouterCovering(bestR, bestC, true);
-			routers[bestR][bestC] = true;
-			
-			addBackbone(bestR, bestC);
-			
-			moneySpend += bestCost;
-			
-			updateRouterCovering();
+				
 			
 		}
 		
-			
-		int finalScore = B - moneySpend;
+		loopRunning = false;
+
+		view.update();
+		
+		updateScore(); // to be sure
+		
+		// outputImage("score_" + currentScore);
+		// outputFile("score_" + currentScore);
+		
+		System.out.println("Computing ended with score: " + currentScore);
+		
+	}
+	
+	
+	private void updateScore() {
+		int s = B - moneySpend;
 		
 		for (int r = 0; r < H; r++) {
 			for (int c = 0; c < W; c++) {
 				if (coverable[r][c] && covered[r][c])
-					finalScore += 1000;
+					s += 1000;
 			}
 		}
-		outputImage("final_" + finalScore);
 		
-		System.out.println("Score: " + finalScore);
-		
+		currentScore = s;
 	}
 	
 	
-	public void addBackbone(int bR, int bC) {
+	
+	
+	public synchronized boolean placeBestRouterWithBackbone() {
+		int bestR = -1, bestC = -1;
+		long bestScore = Long.MIN_VALUE;
+		
+		for (int r = 0; r < H; r++) {
+			for (int c = 0; c < W; c++) {
+				if (!coverable[r][c])
+					continue;
+				int cost = bDist[r][c] * Pb + Pr;
+				if (cost + moneySpend > B)
+					continue;
+				long score = 1000 * routerCovering[r][c] - cost;
+				if (score > bestScore) {
+					bestScore = score;
+					bestR = r;
+					bestC = c;
+				}
+			}
+		}
+		
+		if (bestR == -1 || bestScore < 0) {
+			System.err.println("Can't found any router or the best router remove points from the score.");
+			return false;
+		}
+		
+		return placeRouterWithBackbone(bestR, bestC);
+	}
+	
+	
+	public synchronized boolean placeRouterWithBackbone(int r, int c) {
+
+		int cost = bDist[r][c] * Pb + Pr;
+		
+		if (cost + moneySpend > B) {
+			System.err.println("Can't place router because it cost more than the remaining budget. pos{r="+r+";c="+c+"}"
+				+ "- budget{alreadySpend="+moneySpend+";remaining="+(B - moneySpend)+";currCost="+cost+"} ");
+			return false;
+		}
+		int covering = routerCovering[r][c];
+		long score = 1000 * covering - cost;
+		
+		routersCells.add(new Point(r, c));
+		computeRouterCovering(r, c, true);
+		routers[r][c] = true;
+		
+		moneySpend += Pr; // only router cost, bb cost added in addBackbone()
+		
+		addBackbone(r, c);
+		
+		updateRouterCovering();
+		
+		currentScore += score;
+		
+		System.out.println("Router placed with backbones : pos{r="+r+";c="+c+"} "
+				+ "- score{add="+score+";new="+currentScore+"} "
+				+ "- budget{currCost="+cost+";totalSpend="+moneySpend+";remaining="+(B - moneySpend)+"} "
+				+ "- covering="+covering);
+		
+		return true;
+		
+	}
+	
+	public synchronized void removeRouter(int r, int c) {
+		if (!routers[r][c])
+			return;
+		
+		routers[r][c] = false;
+		routersCells.remove(new Point(r, c));
+		
+		
+		// reset all covering map
+		covered = new boolean[H][W];
+		// refill all covering map
+		for (Point p : routersCells) {
+			computeRouterCovering((int)p.getX(), (int)p.getY(), true);
+		}
+		
+		updateRouterCovering();
+		
+		moneySpend -= Pr;
+		
+		updateScore();
+		
+		System.out.println("Router removed : pos{r="+r+";c="+c+"}");
+	}
+	
+	
+	public synchronized void addBackbone(int bR, int bC) {
 
 		Queue<Runnable> queue = new LinkedList<>();
 		
 		if (bDist[bR][bC] != -1) { // there is already one backbone in the map
+			
+			moneySpend += bDist[bR][bC] * Pb;
+			
 			List<Point> bbSubList = new ArrayList<>();
 			int currD = bDist[bR][bC];
 			while (currD > 0) {
@@ -138,10 +230,11 @@ public class Building {
 				int nextD = currD - 1;
 				boolean tColl = bR<=0, bColl = bR+1>=H;
 				boolean lColl = bC<=0, rColl = bC+1>=W;
-				if (!tColl && !lColl && bDist[bR-1][bC-1] == nextD) { bR--; bC--; }
-				else if (!tColl && !rColl && bDist[bR-1][bC+1] == nextD) { bR--; bC++; }
-				else if (!bColl && !lColl && bDist[bR+1][bC-1] == nextD) { bR++; bC--; }
+				
+				if (!tColl && !rColl && bDist[bR-1][bC+1] == nextD) { bR--; bC++; }
 				else if (!bColl && !rColl && bDist[bR+1][bC+1] == nextD) { bR++; bC++; }
+				else if (!tColl && !lColl && bDist[bR-1][bC-1] == nextD) { bR--; bC--; }
+				else if (!bColl && !lColl && bDist[bR+1][bC-1] == nextD) { bR++; bC--; }
 				else if (!tColl && bDist[bR-1][bC] == nextD) { bR--; }
 				else if (!lColl && bDist[bR][bC-1] == nextD) { bC--; }
 				else if (!bColl && bDist[bR+1][bC] == nextD) { bR++; }
@@ -284,18 +377,24 @@ public class Building {
 	
 	
 	
-	public void toOutput(PrintStream o) {
-		o.println(backboneCells.size());
-		for (Point bb : backboneCells)
-			o.println(bb.x + " " + bb.y);
-		o.println(routersCells.size());
-		for (Point r : routersCells)
-			o.println(r.x + " " + r.y);
+	public synchronized void outputFile(String suffix) {
+		String fileName = inputFileName + ".dat/" + inputFileName + "." + suffix + ".out";
+		try (PrintStream o = new PrintStream(fileName)) {
+			o.println(backboneCells.size());
+			for (Point bb : backboneCells)
+				o.println(bb.x + " " + bb.y);
+			o.println(routersCells.size());
+			for (Point r : routersCells)
+				o.println(r.x + " " + r.y);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 
-	public void outputImage(String suffix) {
-		String fileName = inputFileName + "." + suffix + ".ppm";
+	public synchronized void outputImage(String suffix) {
+		String fileName = inputFileName + ".dat/" + inputFileName + "." + suffix + ".ppm";
 		try (PrintStream out = new PrintStream(fileName)) {
 			out.println("P3 " + W + " " + (3*H) + " 255");
 			
@@ -388,7 +487,7 @@ public class Building {
 		return Math.round(r * 255) + " " + Math.round(g * 255) + " " + Math.round(b * 255);
 	}
 	
-	private static float applyAlpha(float base, float color, float opacity) {
+	static float applyAlpha(float base, float color, float opacity) {
 		return base + opacity * (color - base);
 	}
 	
