@@ -10,18 +10,20 @@ public class IsoContest {
 	public static void main(String[] args) {
 		try (Scanner s = new Scanner(System.in)) {
 			
-			// dans le cas ou la taille de l'entrée n'est pas indiqué comme première valeur de l'entrée
-			while (s.hasNext()) {
-				
-			}
-			
-			
-			// dans le cas où on a la taille de l'entrée en première valeur
+			int nAR = 1;
+			int currW = 0;
 			int n = s.nextInt();
 			for (int i = 0; i < n; i++) {
-				
+				int p = s.nextInt();
+				if (currW + p > 100) {
+					nAR++;
+					currW = p;
+				}
+				else
+					currW += p;
 			}
 			
+			System.out.println(nAR);
 		}
 	}
 	
