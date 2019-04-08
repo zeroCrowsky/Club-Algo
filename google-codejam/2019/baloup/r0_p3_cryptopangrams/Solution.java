@@ -1,4 +1,4 @@
-package r0_q3_cryptopangrams;
+package r0_p3_cryptopangrams;
 
 import java.io.BufferedInputStream;
 import java.math.BigInteger;
@@ -40,19 +40,41 @@ public class Solution {
 		
 		String run() {
 			TreeSet<BigInteger> allPrimes = new TreeSet<>();
-			@SuppressWarnings("unchecked")
-			List<BigInteger>[] pairsOfPrime = new List[L];
+			// @SuppressWarnings("unchecked")
+			// List<BigInteger>[] pairsOfPrime = new List[L];
 			BigInteger[] orderedPrimes = new BigInteger[L+1];
 			char[] output = new char[L+1];
 			
-			// find all prime numbers
-			for (int i = 0; i < L; i++) {
+			// find all prime numbers using factorization
+			/* for (int i = 0; i < L; i++) {
 				List<BigInteger> pr = getPrimeFactors(ciphertext[i]);
 				allPrimes.addAll(pr);
 				pairsOfPrime[i] = pr;
+			} */
+			
+			// find all prime numbers using gcd
+			int iStart = 0;
+			for (; iStart < L - 1; iStart++) {
+				if (!ciphertext[iStart].equals(ciphertext[iStart + 1]))
+					break;
+			}
+			orderedPrimes[iStart + 1] = gcd(ciphertext[iStart], ciphertext[iStart + 1]);
+			allPrimes.add(orderedPrimes[iStart + 1]);
+			orderedPrimes[iStart] = ciphertext[iStart].divide(orderedPrimes[iStart + 1]);
+			allPrimes.add(orderedPrimes[iStart]);
+			
+			for (int i = iStart + 1; i < L; i++) {
+				orderedPrimes[i + 1] = ciphertext[i].divide(orderedPrimes[i]);
+				allPrimes.add(orderedPrimes[i + 1]);
+			}
+			
+			for (int i = iStart - 1; i >= 0; i--) {
+				orderedPrimes[i] = ciphertext[i].divide(orderedPrimes[i + 1]);
+				allPrimes.add(orderedPrimes[i]);
 			}
 			
 			// affect prime numbers to their positions in phrase
+			/*
 			boolean allLettersPlaced = false;
 			while (!allLettersPlaced) {
 				allLettersPlaced = true;
@@ -100,7 +122,7 @@ public class Solution {
 					}
 					
 				}
-			}
+			} */
 			
 			Map<BigInteger, Character> primeToChar = new TreeMap<>();
 			char l = 'A';
@@ -140,5 +162,12 @@ public class Solution {
 	}
 	
 	
-	
+	public static BigInteger gcd(BigInteger p, BigInteger q) {
+        while (!q.equals(BigInteger.ZERO)) {
+            BigInteger temp = q;
+            q = p.remainder(q);
+            p = temp;
+        }
+        return p;
+    }
 }
