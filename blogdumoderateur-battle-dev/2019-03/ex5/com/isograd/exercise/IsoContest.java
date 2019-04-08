@@ -42,10 +42,19 @@ public class IsoContest {
 		if (inLeft.isEmpty() && inRight.isEmpty())
 			test(buff);
 		else {
-			if (!inLeft.isEmpty())
+			if (!inLeft.isEmpty() && inLeft.charAt(0) == 'o') {
 				recur(inLeft.substring(1), inRight, buff + inLeft.substring(0, 1));
-			if (!inRight.isEmpty())
+			}
+			else if (!inRight.isEmpty() && inRight.charAt(0) == 'o') {
 				recur(inLeft, inRight.substring(1), buff + inRight.substring(0, 1));
+			}
+			else {
+				if (!inLeft.isEmpty())
+					recur(inLeft.substring(1), inRight, buff + inLeft.substring(0, 1));
+				if (!inRight.isEmpty())
+					recur(inLeft, inRight.substring(1), buff + inRight.substring(0, 1));
+			}
+			
 		}
 	}
 	
